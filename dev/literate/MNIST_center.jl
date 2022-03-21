@@ -115,8 +115,25 @@ fig
 # Now we do the Gibbs sampling to generate RBM digits.
 
 nrows, ncols = 10, 15
-@time fantasy_x = RBMs.sample_v_from_v(rbm, bitrand(28,28,nrows*ncols); steps=10000)
+nsteps = 5000
+fantasy_F = zeros(nrows*ncols, nsteps)
+fantasy_x = bitrand(28,28,nrows*ncols)
+fantasy_F[:,1] .= RBMs.free_energy(rbm, fantasy_x)
+@time for t in 2:nsteps
+    fantasy_x .= RBMs.sample_v_from_v(rbm, fantasy_x)
+    fantasy_F[:,t] .= RBMs.free_energy(rbm, fantasy_x)
+end
 nothing #hide
+
+# Check equilibration of sampling
+
+fig = Makie.Figure(resolution=(400,300))
+ax = Makie.Axis(fig[1,1], xlabel="sampling time", ylabel="free energy")
+fantasy_F_μ = vec(mean(fantasy_F; dims=1))
+fantasy_F_σ = vec(std(fantasy_F; dims=1))
+Makie.band!(ax, 1:nsteps, fantasy_F_μ - fantasy_F_σ/2, fantasy_F_μ + fantasy_F_σ/2)
+Makie.lines!(ax, 1:nsteps, fantasy_F_μ)
+fig
 
 # Plot the resulting samples.
 

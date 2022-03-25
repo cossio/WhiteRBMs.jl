@@ -77,6 +77,7 @@ function train!(rbm)
     optim = Flux.ADAM()
     vm = bitrand(28, 28, batchsize) # fantasy chains
     history = MVHistory()
+    push!(history, :lpl, mean(RBMs.log_pseudolikelihood(rbm, train_x))) # initial log(PL)
     @time for iter in 1:100 # track pseudolikelihood every 5 epochs
         WhiteRBMs.pcd!(
             rbm, train_x; epochs=5, vm, history, batchsize, optim, ϵv=1f-3,

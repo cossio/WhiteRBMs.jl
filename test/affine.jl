@@ -1,6 +1,6 @@
 using Test: @test, @testset, @inferred
-using LinearAlgebra: I, norm
-using WhitenedRBMs: Affine, whitening_transform
+using LinearAlgebra: I, norm, Symmetric, Diagonal, LowerTriangular
+using WhitenedRBMs: Affine, whitening_transform, whitening_transform!
 
 @testset "affine" begin
     x = randn(5, 7)
@@ -53,4 +53,30 @@ end
     affine = whitening_transform(C) * whitening_transform(μ)
     @test norm(affine * μ) < 1e-10
     @test affine.A * C * affine.A' ≈ I
+end
+
+
+@testset "whitening_transform!" begin
+    μ = randn(5)
+    C = randn(5,5)
+    C = C * C'
+    affine = whitening_transform!(Affine(LowerTriangular(randn(5,5)), randn(5)), μ, C)
+    @test norm(affine * μ) < 1e-10
+    @test affine.A * C * affine.A' ≈ I
+    @test affine.A' * affine.A ≈ inv(C)
+
+    affine = whitening_transform!(Affine(Diagonal(randn(5)), randn(5)), μ)
+    @test affine.A ≈ I
+    @test affine.u ≈ μ
+    @test norm(affine * μ) < 1e-10
+
+    affine = whitening_transform!(Affine(LowerTriangular(randn(5,5)), randn(5)), C)
+    @test affine.A * C * affine.A' ≈ I
+    @test iszero(affine.u)
+
+    C = Diagonal(rand(5))
+    affine = whitening_transform!(Affine(Diagonal(randn(5)), randn(5)), μ, C)
+    @test norm(affine * μ) < 1e-10
+    @test affine.A * C * affine.A' ≈ I
+    @test affine.A' * affine.A ≈ inv(C)
 end

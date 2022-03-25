@@ -82,9 +82,9 @@ mean(@time RBMs.log_pseudolikelihood(rbm, train_x))
 # Train
 
 @time for epoch in 1:100 # track pseudolikelihood every 5 epochs
-    global rbm, history, vm = WhiteRBMs.pcd!(
+    WhiteRBMs.pcd!(
         rbm, train_x; epochs=5, vm, history, batchsize, optim, ϵv=1f-3,
-        transform_v=WhiteRBMs.Whiten(), transform_h=WhiteRBMs.Stdize()
+        transform_v = WhiteRBMs.Whiten(), transform_h = WhiteRBMs.Stdize()
     )
     push!(history, :lpl, mean(RBMs.log_pseudolikelihood(rbm, train_x)))
 end

@@ -17,27 +17,28 @@ function pcd!(
 
     @assert 0 ≤ damping ≤ 1
 
-    white_rbm = safe_whiten_visible_from_data(white_rbm, data, transform_v; wts, ϵ = ϵv)
+    whiten_visible_from_data!(white_rbm, data, transform_v; wts, ϵ = ϵv)
     stats = RBMs.suffstats(visible(white_rbm), data; wts)
 
     for epoch in 1:epochs
         batches = RBMs.minibatches(data, wts; batchsize)
         Δt = @elapsed for (vd, wd) in batches
             # update fantasy chains
-            vm = RBMs.sample_v_from_v(white_rbm, vm; steps)
+            vm .= RBMs.sample_v_from_v(white_rbm, vm; steps)
             # update hidden affine transform
             if !(transform_h isa Identity)
                 inputs = RBMs.inputs_v_to_h(white_rbm, vd)
-                white_rbm = safe_whiten_hidden_from_inputs(
-                    white_rbm, inputs, transform_h; damping, wts=wd, ϵ=ϵh
-                )
+                whiten_hidden_from_inputs!(white_rbm, inputs, transform_h; damping, wts=wd, ϵ=ϵh)
             end
             # compute contrastive divergence gradient
             ∂ = RBMs.∂contrastive_divergence(white_rbm, vd, vm; wd, stats)
+            # compute parameter step according to optimization algorithm
+            Δ = RBMs.update!(∂, white_rbm, optim)
             # update parameters using gradient
-            RBMs.update!(white_rbm, RBMs.update!(∂, white_rbm, optim))
-            # store gradient norms
+            RBMs.update!(white_rbm, Δ)
+            # store gradient and update step norms
             push!(history, :∂, RBMs.gradnorms(∂))
+            push!(history, :Δ, RBMs.gradnorms(Δ))
         end
 
         push!(history, :epoch, epoch)
@@ -45,7 +46,7 @@ function pcd!(
         @debug "epoch $epoch/$epochs ($(round(Δt, digits=2))s)"
     end
 
-    return white_rbm, history, vm
+    return white_rbm, history
 end
 
 function RBMs.∂contrastive_divergence(

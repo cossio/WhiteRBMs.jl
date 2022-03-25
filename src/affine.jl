@@ -39,6 +39,12 @@ Returns the zero affine transformation, which maps all points to zero.
 """
 Base.zero(t::Affine) = Affine(zero(t.A), zero(t.u))
 
+function Base.copy!(dst::Affine, src::Affine)
+    dst.A .= src.A
+    dst.u .= src.u
+    return dst
+end
+
 Base.:*(t::Affine, x::AbstractVecOrMat) = t.A * (x .- t.u)
 Base.:\(t::Affine, y::AbstractVecOrMat) = t.A \ y .+ t.u
 Base.:*(s::Affine, t::Affine) = Affine(s.A * t.A, t \ s.u)
@@ -61,3 +67,21 @@ Returns the `Affine` transform that whitens data with mean `μ` and covariance `
 whitening_transform(u::AbstractVector, C::AbstractMatrix) = Affine(inv(cholesky(C).L), u)
 whitening_transform(C::AbstractMatrix) = Affine(inv(cholesky(C).L))
 whitening_transform(u::AbstractVector) = Affine(u)
+
+function whitening_transform!(affine::Affine, μ::AbstractVector, C::AbstractMatrix)
+    affine.A .= inv(cholesky(C).L)
+    affine.u .= μ
+    return affine
+end
+
+function whitening_transform!(affine::Affine, μ::AbstractVector)
+    copyto!(affine.A, I)
+    affine.u .= μ
+    return affine
+end
+
+function whitening_transform!(affine::Affine, C::AbstractMatrix)
+    affine.A .= inv(cholesky(C).L)
+    affine.u .= 0
+    return affine
+end

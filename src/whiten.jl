@@ -91,6 +91,64 @@ end
 whiten_visible(rbm::RBM, affine_v::Affine) = whiten_visible(whiten(rbm), affine_v)
 whiten_hidden(rbm::RBM, affine_h::Affine) = whiten_hidden(whiten(rbm), affine_h)
 
+# In-place versions
+
+function whiten!(rbm::AffineRBM, affine_v::Affine, affine_h::Affine)
+    whiten_visible!(rbm, affine_v)
+    whiten_hidden!(rbm, affine_h)
+end
+
+whiten!(rbm::WhiteRBM) = whiten!(rbm, one(rbm.affine_v), one(rbm.affine_h))
+
+function whiten_visible!(rbm::WhiteRBM, affine_v::Affine)
+    @assert length(visible(rbm)) == length(affine_v.u)
+    Δθ = inputs_v_to_h(rbm, reshape(affine_v.u, size(visible(rbm))))
+    shift_fields!(hidden(rbm), Δθ)
+    w = reshape(weights(rbm), length(visible(rbm)), length(hidden(rbm)))
+    copyto!(weights(rbm), affine_v.A' \ rbm.affine_v.A' * w)
+    copy!(rbm.affine_v, affine_v)
+    return rbm
+end
+
+function whiten_hidden!(rbm::WhiteRBM, affine_h::Affine)
+    @assert length(hidden(rbm)) == length(affine_h.u)
+    Δg = inputs_h_to_v(rbm, reshape(affine_h.u, size(hidden(rbm))))
+    shift_fields!(visible(rbm), Δg)
+    w = reshape(weights(rbm), length(visible(rbm)), length(hidden(rbm)))
+    copyto!(weights(rbm), w * rbm.affine_h.A / affine_h.A)
+    copy!(rbm.affine_h, affine_h)
+    return rbm
+end
+
+"""
+    energy_shift(rbm, affine_v, affine_h)
+
+Computes the constant energy shift if the affine transformations were updated as given.
+"""
+function energy_shift(rbm::WhiteRBM, affine_v::Affine, affine_h::Affine)
+    @assert length(visible(rbm)) == length(affine_v.u)
+    @assert length(hidden(rbm)) == length(affine_h.u)
+    E1 = RBMs.interaction_energy(RBM(rbm), rbm.affine_v.A * rbm.affine_v.u, rbm.affine_h.A * rbm.affine_h.u)
+    E2 = RBMs.interaction_energy(RBM(rbm), rbm.affine_v.A * affine_v.u, rbm.affine_h.A * affine_h.u)
+    return E2 - E1
+end
+
+function energy_shift_visible(rbm::WhiteRBM, affine_v::Affine)
+    Δa = affine_v.u - rbm.affine_v.u
+    return RBMs.interaction_energy(RBM(rbm), rbm.affine_v.A * Δa, rbm.affine_h.A * rbm.affine_h.u)
+end
+
+function energy_shift_hidden(rbm::WhiteRBM, affine_h::Affine)
+    Δb = affine_h.u - rbm.affine_h.u
+    return RBMs.interaction_energy(RBM(rbm), rbm.affine_v.A * rbm.affine_v.u, rbm.affine_h.A * Δb)
+end
+
+energy_shift(rbm::RBM, affine_v::Affine, affine_h::Affine) = energy_shift(whiten(rbm), affine_v, affine_h)
+energy_shift_visible(rbm::RBM, affine_v::Affine) = energy_shift_visible(whiten(rbm), affine_v)
+energy_shift_hidden(rbm::RBM, affine_h::Affine) = energy_shift_hidden(whiten(rbm), affine_h)
+
+# Safe versions (preserve argument type)
+
 """
     safe_whiten(white_rbm, affine_v, affine_h)
 

@@ -7,7 +7,7 @@ import ValueHistories
 import Flux
 import RestrictedBoltzmannMachines as RBMs
 
-using LinearAlgebra: Diagonal, cholesky, diagm, Symmetric
+using LinearAlgebra: Diagonal, cholesky, diagm, Symmetric, I
 using ValueHistories: MVHistory
 using RestrictedBoltzmannMachines: RBM, AbstractLayer
 using RestrictedBoltzmannMachines: Binary, Spin, Potts, Gaussian, ReLU, dReLU, pReLU, xReLU

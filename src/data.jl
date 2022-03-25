@@ -12,12 +12,28 @@ function whiten_visible_from_data(
     return whiten_visible(white_rbm, affine_v)
 end
 
+function whiten_visible_from_data!(
+    white_rbm::WhiteRBM, data::AbstractArray, transform::AbstractTransform = Whiten();
+    wts = nothing, ϵ::Real = 0
+)
+    affine_v = visible_affine_from_data(white_rbm, data, transform; wts, ϵ)
+    return whiten_visible!(white_rbm, affine_v)
+end
+
 function whiten_hidden_from_inputs(
     white_rbm::WhiteRBM, inputs::AbstractArray, transform::AbstractTransform = Stdize();
     wts = nothing, damping::Real = 0, ϵ::Real = 0
 )
     affine_h = hidden_affine_from_inputs(white_rbm, inputs, transform; wts, damping, ϵ)
     return whiten_hidden(white_rbm, affine_h)
+end
+
+function whiten_hidden_from_inputs!(
+    white_rbm::WhiteRBM, inputs::AbstractArray, transform::AbstractTransform = Stdize();
+    wts = nothing, damping::Real = 0, ϵ::Real = 0
+)
+    affine_h = hidden_affine_from_inputs(white_rbm, inputs, transform; wts, damping, ϵ)
+    return whiten_hidden!(white_rbm, affine_h)
 end
 
 function safe_whiten_visible_from_data(
@@ -48,7 +64,7 @@ function visible_affine_from_data(
     μ = RBMs.batchmean(visible(white_rbm), data; wts)
     C = RBMs.batchcov(visible(white_rbm), data; wts, mean=μ)
     C_flat = reshape(C, length(visible(white_rbm)), length(visible(white_rbm)))
-    return whitening_transform(vec(μ), Symmetric(C_flat + ϵ * LinearAlgebra.I))
+    return whitening_transform(vec(μ), Symmetric(C_flat + ϵ * I))
 end
 
 function visible_affine_from_data(

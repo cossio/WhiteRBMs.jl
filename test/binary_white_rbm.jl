@@ -1,20 +1,20 @@
 import Zygote
-import RestrictedBoltzmannMachines as RBMs
-import WhitenedRBMs
 
 using Test: @test, @testset, @inferred
 using Random: bitrand
 using Statistics: mean
-using WhitenedRBMs: BinaryWhiteRBM, WhiteRBM, Affine
-using WhitenedRBMs: whiten, blacken, whiten_visible, whiten_hidden
+using LinearAlgebra: I
 using RestrictedBoltzmannMachines: RBM, BinaryRBM
 using RestrictedBoltzmannMachines: visible, hidden, weights
-using RestrictedBoltzmannMachines: energy, interaction_energy, free_energy
+using RestrictedBoltzmannMachines: energy, interaction_energy, free_energy, ∂free_energy
 using RestrictedBoltzmannMachines: inputs_v_to_h, inputs_h_to_v
-using LinearAlgebra: I
+using WhitenedRBMs: BinaryWhiteRBM, WhiteRBM, Affine
+using WhitenedRBMs: whiten, blacken, whiten_visible, whiten_hidden
+using WhitenedRBMs: whiten!, whiten_visible!, whiten_hidden!
+using WhitenedRBMs: energy_shift, energy_shift_visible, energy_shift_hidden
 
 @testset "whiten / blacken" begin
-    rbm = @inferred RBMs.BinaryRBM(randn(3), randn(2), randn(3,2))
+    rbm = @inferred BinaryRBM(randn(3), randn(2), randn(3,2))
     affine_v = @inferred Affine(randn(3,3), randn(3))
     affine_h = @inferred Affine(randn(2,2), randn(2))
     white_rbm = @inferred whiten(rbm, affine_v, affine_h)
@@ -89,9 +89,43 @@ end
     @test inputs_v_to_h(rbm, v .- affine_v.u) ≈ @inferred inputs_v_to_h(white_rbm, v)
     @test inputs_h_to_v(rbm, h .- affine_h.u) ≈ @inferred inputs_h_to_v(white_rbm, h)
 
-    ΔE = RBMs.interaction_energy(rbm, affine_v.u, affine_h.u)::Real
-    @test energy(rbm, v, h) ≈ RBMs.energy(white_rbm, v, h) .- ΔE
-    @test free_energy(rbm, v) ≈ RBMs.free_energy(white_rbm, v) .- ΔE
+    ΔE = interaction_energy(rbm, affine_v.u, affine_h.u)::Real
+    @test @inferred(energy_shift(rbm, affine_v, affine_h)) ≈ ΔE
+    @test energy(rbm, v, h) ≈ energy(white_rbm, v, h) .- ΔE
+    @test free_energy(rbm, v) ≈ free_energy(white_rbm, v) .- ΔE
+
+    @test energy_shift_visible(rbm, affine_v) ≈ energy_shift(rbm, affine_v, one(affine_h))
+    @test energy_shift_hidden(rbm, affine_h)  ≈ energy_shift(rbm, one(affine_v), affine_h)
+end
+
+@testset "whiten!" begin
+    rbm = @inferred BinaryWhiteRBM(
+        randn(3), randn(2), randn(3,2),
+        Affine(randn(3,3), randn(3)),
+        Affine(randn(2,2), randn(2))
+    )
+    @test iszero(energy_shift(rbm, rbm.affine_v, rbm.affine_h))
+
+    v = bitrand(size(visible(rbm))..., 100)
+    h = bitrand(size(hidden(rbm))..., 100)
+    E = energy(rbm, v, h)
+    F = free_energy(rbm, v)
+    affine_v = @inferred Affine(randn(3,3), randn(3))
+    affine_h = @inferred Affine(randn(2,2), randn(2))
+
+    @test energy_shift_visible(rbm, affine_v) ≈ energy_shift(rbm, affine_v, rbm.affine_h)
+    @test energy_shift_hidden(rbm, affine_h) ≈ energy_shift(rbm, rbm.affine_v, affine_h)
+
+    ΔE = energy_shift(rbm, affine_v, affine_h)
+    @test energy(whiten(rbm, affine_v, affine_h), v, h) ≈ E .+ ΔE
+
+    whiten!(rbm, affine_v, affine_h)
+    @test rbm.affine_v.u ≈ affine_v.u
+    @test rbm.affine_h.u ≈ affine_h.u
+    @test rbm.affine_v.A ≈ affine_v.A
+    @test rbm.affine_h.A ≈ affine_h.A
+    @test energy(rbm, v, h) ≈ E .+ ΔE
+    @test free_energy(rbm, v) ≈ F .+ ΔE
 end
 
 @testset "free energy" begin
@@ -99,8 +133,8 @@ end
     affine_h = Affine(randn(2,2), randn(2))
     white_rbm = BinaryWhiteRBM(randn(3), randn(2), randn(3,2), affine_v, affine_h)
     v = bitrand(size(visible(white_rbm))...)
-    F = -log(sum(exp(-RBMs.energy(white_rbm, v, h)) for h in [[0,0], [0,1], [1,0], [1,1]]))
-    @test RBMs.free_energy(white_rbm, v) ≈ F
+    F = -log(sum(exp(-energy(white_rbm, v, h)) for h in [[0,0], [0,1], [1,0], [1,1]]))
+    @test free_energy(white_rbm, v) ≈ F
 end
 
 @testset "∂free energy" begin
@@ -109,9 +143,9 @@ end
     white_rbm = BinaryWhiteRBM(randn(3), randn(2), randn(3,2), affine_v, affine_h)
     v = bitrand(size(visible(white_rbm))...)
     gs = Zygote.gradient(white_rbm) do white_rbm
-        mean(RBMs.free_energy(white_rbm, v))
+        mean(free_energy(white_rbm, v))
     end
-    ∂ = RBMs.∂free_energy(white_rbm, v)
+    ∂ = ∂free_energy(white_rbm, v)
     @test ∂.visible.θ ≈ only(gs).visible.θ
     @test ∂.hidden.θ ≈ only(gs).hidden.θ
     @test ∂.w ≈ only(gs).w

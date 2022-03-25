@@ -66,24 +66,32 @@ rbm = whiten_visible_from_data(whiten(rbm), train_x, WhiteRBMs.Center(); ϵ=1f-3
 rbm.hidden.θ .= 0
 nothing #hide
 
-# Train init
+# Pseudolikelihood before training
 
-batchsize = 256
-optim = Flux.ADAM()
-vm = bitrand(28, 28, batchsize) # fantasy chains
-history = MVHistory()
-push!(history, :lpl, mean(RBMs.log_pseudolikelihood(rbm, train_x)))
-nothing #hide
+mean(@time RBMs.log_pseudolikelihood(rbm, train_x))
 
-# Train
+# Train loop
 
-@time for epoch in 1:100 # track pseudolikelihood every 5 epochs
-    WhiteRBMs.pcd!(
-        rbm, train_x; epochs=5, vm, history=history, batchsize, optim, ϵv=1f-3,
-        transform_v=WhiteRBMs.Center(), transform_h=WhiteRBMs.Center()
-    )
-    push!(history, :lpl, mean(RBMs.log_pseudolikelihood(rbm, train_x)))
+function train!(rbm)
+    batchsize = 256
+    optim = Flux.ADAM()
+    vm = bitrand(28, 28, batchsize) # fantasy chains
+    history = MVHistory()
+    push!(history, :lpl, mean(RBMs.log_pseudolikelihood(rbm, train_x))) # initial log(PL)
+    @time for iter in 1:100 # track pseudolikelihood every 5 epochs
+        WhiteRBMs.pcd!(
+            rbm, train_x; epochs=5, vm, history, batchsize, optim, ϵv=1f-3,
+            transform_v=WhiteRBMs.Center(), transform_h=WhiteRBMs.Center()
+        )
+        push!(history, :lpl, mean(RBMs.log_pseudolikelihood(rbm, train_x)))
+        push!(history, :iter, iter)
+    end
+    return rbm, history, vm
 end
+
+# Train!
+
+rbm, history, vm = train!(rbm)
 nothing #hide
 
 # Convert to equivalent RBM (without affine transforms)

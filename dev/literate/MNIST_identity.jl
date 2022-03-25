@@ -75,11 +75,15 @@ history = MVHistory()
 push!(history, :lpl, mean(RBMs.log_pseudolikelihood(rbm, train_x)))
 nothing #hide
 
+# Pseudolikelihood before training
+
+mean(@time RBMs.log_pseudolikelihood(rbm, train_x))
+
 # Train
 
 @time for epoch in 1:100 # track pseudolikelihood every 5 epochs
     WhiteRBMs.pcd!(
-        rbm, train_x; epochs=5, vm, history=history, batchsize, optim, ϵv=1f-3,
+        rbm, train_x; epochs=5, vm, history, batchsize, optim, ϵv=1f-3,
         transform_v=WhiteRBMs.Identity(), transform_h=WhiteRBMs.Identity()
     )
     push!(history, :lpl, mean(RBMs.log_pseudolikelihood(rbm, train_x)))

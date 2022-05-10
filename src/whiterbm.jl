@@ -78,10 +78,10 @@ function RBMs.interaction_energy(white_rbm::WhiteRBM, v::AbstractArray, h::Abstr
     return RBMs.interaction_energy(RBM(white_rbm), white_v, white_h)
 end
 
-function RBMs.free_energy(white_rbm::WhiteRBM, v::AbstractArray; β::Real = true)
+function RBMs.free_energy(white_rbm::WhiteRBM, v::AbstractArray)
     inputs = RBMs.inputs_v_to_h(white_rbm, v)
     E_vis = RBMs.energy(visible(white_rbm), v)
-    F_hid = RBMs.free_energy(hidden(white_rbm), inputs; β)
+    F_hid = RBMs.free_energy(hidden(white_rbm), inputs)
     b = reshape(white_rbm.affine_h.u, size(hidden(white_rbm)))
     ΔE = RBMs.energy(RBMs.Binary(b), inputs)
     return E_vis - ΔE + F_hid
@@ -101,52 +101,52 @@ function RBMs.inputs_h_to_v(white_rbm::WhiteRBM, h::AbstractArray)
     return reshape(white_rbm.affine_v.A' * I_flat, size(inputs))
 end
 
-function RBMs.sample_h_from_v(white_rbm::WhiteRBM, v::AbstractArray; β::Real = true)
+function RBMs.sample_h_from_v(white_rbm::WhiteRBM, v::AbstractArray)
     inputs = inputs_v_to_h(white_rbm, v)
-    return RBMs.transfer_sample(hidden(white_rbm), inputs; β)
+    return RBMs.transfer_sample(hidden(white_rbm), inputs)
 end
 
-function RBMs.sample_v_from_h(white_rbm::WhiteRBM, h::AbstractArray; β::Real = true)
+function RBMs.sample_v_from_h(white_rbm::WhiteRBM, h::AbstractArray)
     inputs = inputs_h_to_v(white_rbm, h)
-    return RBMs.transfer_sample(visible(white_rbm), inputs; β)
+    return RBMs.transfer_sample(visible(white_rbm), inputs)
 end
 
-function RBMs.sample_v_from_v(white_rbm::WhiteRBM, v::AbstractArray; β::Real = true, steps::Int = 1)
+function RBMs.sample_v_from_v(white_rbm::WhiteRBM, v::AbstractArray; steps::Int = 1)
     @assert size(visible(white_rbm)) == size(v)[1:ndims(visible(white_rbm))]
     for _ in 1:steps
-        v = oftype(v, RBMs.sample_v_from_v_once(white_rbm, v; β))
+        v = oftype(v, RBMs.sample_v_from_v_once(white_rbm, v))
     end
     return v
 end
 
-function RBMs.sample_h_from_h(white_rbm::WhiteRBM, h::AbstractArray; β::Real = true, steps::Int = 1)
+function RBMs.sample_h_from_h(white_rbm::WhiteRBM, h::AbstractArray; steps::Int = 1)
     @assert size(hidden(white_rbm)) == size(h)[1:ndims(hidden(white_rbm))]
     for _ in 1:steps
-        h = oftype(h, RBMs.sample_h_from_h_once(white_rbm, h; β))
+        h = oftype(h, RBMs.sample_h_from_h_once(white_rbm, h))
     end
     return h
 end
 
-function RBMs.sample_v_from_v_once(white_rbm::WhiteRBM, v::AbstractArray; β::Real = true)
-    h = RBMs.sample_h_from_v(white_rbm, v; β)
-    v = RBMs.sample_v_from_h(white_rbm, h; β)
+function RBMs.sample_v_from_v_once(white_rbm::WhiteRBM, v::AbstractArray)
+    h = RBMs.sample_h_from_v(white_rbm, v)
+    v = RBMs.sample_v_from_h(white_rbm, h)
     return v
 end
 
-function RBMs.sample_h_from_h_once(white_rbm::WhiteRBM, h::AbstractArray; β::Real = true)
-    v = RBMs.sample_v_from_h(white_rbm, h; β)
-    h = RBMs.sample_h_from_v(white_rbm, v; β)
+function RBMs.sample_h_from_h_once(white_rbm::WhiteRBM, h::AbstractArray)
+    v = RBMs.sample_v_from_h(white_rbm, h)
+    h = RBMs.sample_h_from_v(white_rbm, v)
     return h
 end
 
-function RBMs.mean_h_from_v(white_rbm::WhiteRBM, v::AbstractArray; β::Real = true)
+function RBMs.mean_h_from_v(white_rbm::WhiteRBM, v::AbstractArray)
     inputs = RBMs.inputs_v_to_h(white_rbm, v)
-    return RBMs.transfer_mean(hidden(white_rbm), inputs; β)
+    return RBMs.transfer_mean(hidden(white_rbm), inputs)
 end
 
-function RBMs.mean_v_from_h(white_rbm::WhiteRBM, h::AbstractArray; β::Real = true)
+function RBMs.mean_v_from_h(white_rbm::WhiteRBM, h::AbstractArray)
     inputs = RBMs.inputs_h_to_v(white_rbm, h)
-    return RBMs.transfer_mean(visible(white_rbm), inputs; β)
+    return RBMs.transfer_mean(visible(white_rbm), inputs)
 end
 
 function RBMs.mode_v_from_h(white_rbm::WhiteRBM, h::AbstractArray)
@@ -159,9 +159,9 @@ function RBMs.mode_h_from_v(white_rbm::WhiteRBM, v::AbstractArray)
     return RBMs.transfer_mode(hidden(white_rbm), inputs)
 end
 
-function RBMs.reconstruction_error(white_rbm::WhiteRBM, v::AbstractArray; β::Real = true, steps::Int = 1)
+function RBMs.reconstruction_error(white_rbm::WhiteRBM, v::AbstractArray; steps::Int = 1)
     @assert size(visible(white_rbm)) == size(v)[1:ndims(visible(white_rbm))]
-    v1 = RBMs.sample_v_from_v(white_rbm, v; β, steps)
+    v1 = RBMs.sample_v_from_v(white_rbm, v; steps)
     ϵ = Statistics.mean(abs.(v .- v1); dims = 1:ndims(visible(white_rbm)))
     if ndims(v) == ndims(visible(white_rbm))
         return only(ϵ)
@@ -205,6 +205,6 @@ function RBMs.∂interaction_energy(
     return ∂w
 end
 
-function RBMs.log_pseudolikelihood(rbm::WhiteRBM, v::AbstractArray; β::Real=1)
-    return RBMs.log_pseudolikelihood(blacken(rbm), v; β)
+function RBMs.log_pseudolikelihood(rbm::WhiteRBM, v::AbstractArray)
+    return RBMs.log_pseudolikelihood(blacken(rbm), v)
 end

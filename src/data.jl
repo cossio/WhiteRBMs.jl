@@ -109,7 +109,7 @@ function hidden_affine_from_inputs(
     white_rbm::WhiteRBM, inputs::AbstractArray, ::Center;
     wts = nothing, damping::Real = 0, ϵ::Real = 0
 )
-    h_ave = RBMs.transfer_mean(hidden(white_rbm), inputs)
+    h_ave = RBMs.mean_from_inputs(hidden(white_rbm), inputs)
     μ = batchmean(hidden(white_rbm), h_ave; wts)
     affine_h_new = whitening_transform(vec(μ))
     return damping * affine_h_new + (1 - damping) * white_rbm.affine_h
@@ -119,14 +119,14 @@ function hidden_affine_from_inputs(
     white_rbm::WhiteRBM, inputs::AbstractArray, ::Identity;
     wts = nothing, damping::Real = 0, ϵ::Real = 0
 )
-    h_ave = RBMs.transfer_mean(hidden(white_rbm), inputs)
+    h_ave = RBMs.mean_from_inputs(hidden(white_rbm), inputs)
     μ = batchmean(hidden(white_rbm), h_ave; wts)
     return whitening_transform(vec(zero(μ)))
 end
 
 function hidden_stats(layer, inputs::AbstractArray; wts = nothing)
-    h_ave = RBMs.transfer_mean(layer, inputs)
-    h_var = RBMs.transfer_var(layer, inputs)
+    h_ave = RBMs.mean_from_inputs(layer, inputs)
+    h_var = RBMs.var_from_inputs(layer, inputs)
     μ = batchmean(layer, h_ave; wts)
     ν_int = batchmean(layer, h_var; wts)
     ν_ext = batchvar(layer, h_ave; wts, mean = μ)

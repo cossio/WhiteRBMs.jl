@@ -27,7 +27,7 @@ end
     )
     for layer in layers
         offset = randn(size(layer)...)
-        x = RBMs.transfer_sample(layer, randn(size(layer)..., 2, 3))
+        x = RBMs.sample_from_inputs(layer, randn(size(layer)..., 2, 3))
         layer_shifted = @inferred shift_fields(layer, offset)
         @test energy(layer_shifted, x) ≈ energy(layer, x) + energy_shift(offset, x)
     end
@@ -48,7 +48,7 @@ end
     )
     for layer in layers
         offset = randn(size(layer)...)
-        x = RBMs.transfer_sample(layer, randn(size(layer)..., 2, 3))
+        x = RBMs.sample_from_inputs(layer, randn(size(layer)..., 2, 3))
         E = energy(layer, x)
         @inferred shift_fields!(layer, offset)
         @test energy(layer, x) ≈ E + energy_shift(offset, x)

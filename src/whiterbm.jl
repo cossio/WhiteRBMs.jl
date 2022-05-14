@@ -103,12 +103,12 @@ end
 
 function RBMs.sample_h_from_v(white_rbm::WhiteRBM, v::AbstractArray)
     inputs = inputs_v_to_h(white_rbm, v)
-    return RBMs.transfer_sample(hidden(white_rbm), inputs)
+    return RBMs.sample_from_inputs(hidden(white_rbm), inputs)
 end
 
 function RBMs.sample_v_from_h(white_rbm::WhiteRBM, h::AbstractArray)
     inputs = inputs_h_to_v(white_rbm, h)
-    return RBMs.transfer_sample(visible(white_rbm), inputs)
+    return RBMs.sample_from_inputs(visible(white_rbm), inputs)
 end
 
 function RBMs.sample_v_from_v(white_rbm::WhiteRBM, v::AbstractArray; steps::Int = 1)
@@ -141,22 +141,22 @@ end
 
 function RBMs.mean_h_from_v(white_rbm::WhiteRBM, v::AbstractArray)
     inputs = RBMs.inputs_v_to_h(white_rbm, v)
-    return RBMs.transfer_mean(hidden(white_rbm), inputs)
+    return RBMs.mean_from_inputs(hidden(white_rbm), inputs)
 end
 
 function RBMs.mean_v_from_h(white_rbm::WhiteRBM, h::AbstractArray)
     inputs = RBMs.inputs_h_to_v(white_rbm, h)
-    return RBMs.transfer_mean(visible(white_rbm), inputs)
+    return RBMs.mean_from_inputs(visible(white_rbm), inputs)
 end
 
 function RBMs.mode_v_from_h(white_rbm::WhiteRBM, h::AbstractArray)
     inputs = RBMs.inputs_h_to_v(white_rbm, h)
-    return RBMs.transfer_mode(visible(white_rbm), inputs)
+    return RBMs.mode_from_inputs(visible(white_rbm), inputs)
 end
 
 function RBMs.mode_h_from_v(white_rbm::WhiteRBM, v::AbstractArray)
     inputs = RBMs.inputs_v_to_h(white_rbm, v)
-    return RBMs.transfer_mode(hidden(white_rbm), inputs)
+    return RBMs.mode_from_inputs(hidden(white_rbm), inputs)
 end
 
 function RBMs.reconstruction_error(white_rbm::WhiteRBM, v::AbstractArray; steps::Int = 1)
@@ -189,7 +189,7 @@ function RBMs.∂free_energy(
     stats = RBMs.suffstats(visible(white_rbm), v; wts)
 )
     inputs = RBMs.inputs_v_to_h(white_rbm, v)
-    h = RBMs.transfer_mean(hidden(white_rbm), inputs)
+    h = RBMs.mean_from_inputs(hidden(white_rbm), inputs)
     ∂v = RBMs.∂energy(visible(white_rbm), stats)
     ∂h = RBMs.∂free_energy(hidden(white_rbm), inputs; wts)
     ∂w = RBMs.∂interaction_energy(white_rbm, v, h; wts)

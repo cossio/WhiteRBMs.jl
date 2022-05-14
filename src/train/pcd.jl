@@ -69,6 +69,6 @@ RBMs.update!(∂::NamedTuple, rbm::WhiteRBM, optim) = RBMs.update!(∂, RBM(rbm)
 
 function initial_fantasy_v(rbm, data::AbstractArray, batchsize::Int)
     inputs = falses(size(data)[1:(end - 1)]..., batchsize)
-    vm = RBMs.transfer_sample(visible(rbm), inputs)
+    vm = RBMs.sample_from_inputs(visible(rbm), inputs)
     return oftype(data, vm)
 end

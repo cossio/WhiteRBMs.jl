@@ -1,6 +1,6 @@
 using Test: @test, @testset, @inferred
 using LinearAlgebra: I, norm, Symmetric, Diagonal, LowerTriangular
-using WhitenedRBMs: Affine, whitening_transform, whitening_transform!
+using WhiteRBMs: Affine, whitening_transform, whitening_transform!
 
 @testset "affine" begin
     x = randn(5, 7)

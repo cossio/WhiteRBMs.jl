@@ -1,7 +1,7 @@
 import RestrictedBoltzmannMachines as RBMs
 using RestrictedBoltzmannMachines: energy
 using Test: @test, @testset, @inferred
-using WhitenedRBMs: shift_fields, shift_fields!
+using WhiteRBMs: shift_fields, shift_fields!
 
 function energy_shift(offset::AbstractArray, x::AbstractArray)
     @assert size(offset) == size(x)[1:ndims(offset)]

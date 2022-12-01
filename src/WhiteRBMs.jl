@@ -1,4 +1,4 @@
-module WhitenedRBMs
+module WhiteRBMs
 
 import Random
 import Statistics

@@ -1,9 +1,9 @@
 import MKL # Github Actions uses Intel CPUs, where MKL is faster than OpenBLAS
 import Documenter
 import Literate
-import WhitenedRBMs
+import WhiteRBMs
 
-ENV["JULIA_DEBUG"] = "Documenter,Literate,WhitenedRBMs"
+ENV["JULIA_DEBUG"] = "Documenter,Literate,WhiteRBMs"
 
 #=
 We place Literate.jl source .jl files and the generated .md files inside docs/src/literate.
@@ -52,8 +52,8 @@ end
 Build docs.
 =#
 Documenter.makedocs(
-    modules = [WhitenedRBMs],
-    sitename = "WhitenedRBMs.jl",
+    modules = [WhiteRBMs],
+    sitename = "WhiteRBMs.jl",
     pages = [
         "Home" => "index.md",
         "Examples" => [
@@ -75,6 +75,6 @@ clear_md_files(literate_dir)
 Deploy docs to Github pages.
 =#
 Documenter.deploydocs(
-    repo = "github.com/cossio/WhitenedRBMs.jl.git",
+    repo = "github.com/cossio/WhiteRBMs.jl.git",
     devbranch = "master"
 )

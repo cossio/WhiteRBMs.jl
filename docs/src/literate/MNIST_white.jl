@@ -21,12 +21,12 @@ import Makie
 import MLDatasets
 import Flux
 import RestrictedBoltzmannMachines as RBMs
-import WhitenedRBMs as WhiteRBMs
+import WhiteRBMs
 using Statistics: mean, var, std
 using Random: bitrand
 using ValueHistories: MVHistory
 using RestrictedBoltzmannMachines: BinaryRBM
-using WhitenedRBMs: whiten, blacken, whiten_visible_from_data
+using WhiteRBMs: whiten, blacken, whiten_visible_from_data
 nothing #hide
 
 #=

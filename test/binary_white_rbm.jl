@@ -8,10 +8,10 @@ using RestrictedBoltzmannMachines: RBM, BinaryRBM
 using RestrictedBoltzmannMachines: visible, hidden, weights
 using RestrictedBoltzmannMachines: energy, interaction_energy, free_energy, ∂free_energy
 using RestrictedBoltzmannMachines: inputs_v_to_h, inputs_h_to_v
-using WhitenedRBMs: BinaryWhiteRBM, WhiteRBM, Affine
-using WhitenedRBMs: whiten, blacken, whiten_visible, whiten_hidden
-using WhitenedRBMs: whiten!, whiten_visible!, whiten_hidden!
-using WhitenedRBMs: energy_shift, energy_shift_visible, energy_shift_hidden
+using WhiteRBMs: BinaryWhiteRBM, WhiteRBM, Affine
+using WhiteRBMs: whiten, blacken, whiten_visible, whiten_hidden
+using WhiteRBMs: whiten!, whiten_visible!, whiten_hidden!
+using WhiteRBMs: energy_shift, energy_shift_visible, energy_shift_hidden
 
 @testset "whiten / blacken" begin
     rbm = @inferred BinaryRBM(randn(3), randn(2), randn(3,2))

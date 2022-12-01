@@ -1,4 +1,4 @@
-# WhitenedRBMs.jl Documentation
+# WhiteRBMs.jl Documentation
 
 A Julia package to train and simulate *whitened* Restricted Boltzmann Machines.
 
@@ -14,7 +14,7 @@ Install with:
 
 ```julia
 import Pkg
-Pkg.add(url="https://github.com/cossio/WhitenedRBMs.jl")
+Pkg.add(url="https://github.com/cossio/WhiteRBMs.jl")
 ```
 
 ## Related

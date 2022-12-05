@@ -7,7 +7,7 @@ using LinearAlgebra: I
 using RestrictedBoltzmannMachines: RBM, BinaryRBM
 using RestrictedBoltzmannMachines: visible, hidden, weights
 using RestrictedBoltzmannMachines: energy, interaction_energy, free_energy, ∂free_energy
-using RestrictedBoltzmannMachines: inputs_v_to_h, inputs_h_to_v
+using RestrictedBoltzmannMachines: inputs_h_from_v, inputs_v_from_h
 using WhiteRBMs: BinaryWhiteRBM, WhiteRBM, Affine
 using WhiteRBMs: whiten, blacken, whiten_visible, whiten_hidden
 using WhiteRBMs: whiten!, whiten_visible!, whiten_hidden!
@@ -22,16 +22,16 @@ using WhiteRBMs: energy_shift, energy_shift_visible, energy_shift_hidden
     @test white_rbm.affine_h.u ≈ affine_h.u
     @test white_rbm.affine_v.A ≈ affine_v.A
     @test white_rbm.affine_h.A ≈ affine_h.A
-    @test affine_v.A' * weights(white_rbm) * affine_h.A ≈ weights(rbm)
-    @test visible(rbm).θ ≈ visible(white_rbm).θ - weights(rbm) * affine_h.u
-    @test hidden(rbm).θ ≈ hidden(white_rbm).θ - weights(rbm)' * affine_v.u
+    @test affine_v.A' * white_rbm.w * affine_h.A ≈ rbm.w
+    @test rbm.visible.θ ≈ white_rbm.visible.θ - rbm.w * affine_h.u
+    @test rbm.hidden.θ ≈ white_rbm.hidden.θ - rbm.w' * affine_v.u
     @test blacken(rbm) == rbm
 
     brbm = @inferred blacken(white_rbm)
     wrbm = @inferred whiten(white_rbm)
-    @test visible(brbm).θ ≈ visible(wrbm).θ ≈ visible(rbm).θ
-    @test hidden(brbm).θ ≈ hidden(wrbm).θ ≈ hidden(rbm).θ
-    @test weights(brbm) ≈ weights(wrbm) ≈ weights(rbm)
+    @test brbm.visible.θ ≈ wrbm.visible.θ ≈ rbm.visible.θ
+    @test brbm.hidden.θ ≈ wrbm.hidden.θ ≈ rbm.hidden.θ
+    @test brbm.w ≈ wrbm.w ≈ rbm.w
 
     @test iszero(wrbm.affine_v.u)
     @test iszero(wrbm.affine_h.u)
@@ -46,9 +46,9 @@ using WhiteRBMs: energy_shift, energy_shift_visible, energy_shift_hidden
     @test white_rbm_new.affine_h.u == affine_h.u
     @test white_rbm_new.affine_h.A == affine_h.A
     white_rbm_expected = whiten(white_rbm, affine_v_new, affine_h)
-    @test visible(white_rbm_new).θ ≈ visible(white_rbm_expected).θ
-    @test hidden(white_rbm_new).θ ≈ hidden(white_rbm_expected).θ
-    @test weights(white_rbm_new) ≈ weights(white_rbm_expected)
+    @test white_rbm_new.visible.θ ≈ white_rbm_expected.visible.θ
+    @test white_rbm_new.hidden.θ ≈ white_rbm_expected.hidden.θ
+    @test white_rbm_new.w ≈ white_rbm_expected.w
 
     # whiten_hidden
     affine_h_new = @inferred Affine(randn(2,2), randn(2))
@@ -58,9 +58,9 @@ using WhiteRBMs: energy_shift, energy_shift_visible, energy_shift_hidden
     @test white_rbm_new.affine_h.u == affine_h_new.u
     @test white_rbm_new.affine_h.A == affine_h_new.A
     white_rbm_expected = whiten(white_rbm, affine_v, affine_h_new)
-    @test visible(white_rbm_new).θ ≈ visible(white_rbm_expected).θ
-    @test hidden(white_rbm_new).θ ≈ hidden(white_rbm_expected).θ
-    @test weights(white_rbm_new) ≈ weights(white_rbm_expected)
+    @test white_rbm_new.visible.θ ≈ white_rbm_expected.visible.θ
+    @test white_rbm_new.hidden.θ ≈ white_rbm_expected.hidden.θ
+    @test white_rbm_new.w ≈ white_rbm_expected.w
 
     wrbm1 = whiten_visible(whiten_hidden(rbm, affine_h), affine_v)
     wrbm2 = whiten_hidden(whiten_visible(rbm, affine_v), affine_h)
@@ -69,9 +69,9 @@ using WhiteRBMs: energy_shift, energy_shift_visible, energy_shift_hidden
         @test wrbm.affine_v.A == affine_v.A
         @test wrbm.affine_h.u == affine_h.u
         @test wrbm.affine_h.A == affine_h.A
-        @test visible(wrbm).θ ≈ visible(white_rbm).θ
-        @test hidden(wrbm).θ ≈ hidden(white_rbm).θ
-        @test weights(wrbm) ≈ weights(white_rbm)
+        @test wrbm.visible.θ ≈ white_rbm.visible.θ
+        @test wrbm.hidden.θ ≈ white_rbm.hidden.θ
+        @test wrbm.w ≈ white_rbm.w
     end
 end
 
@@ -80,14 +80,14 @@ end
     affine_h = @inferred Affine(randn(2,2), randn(2))
     rbm = BinaryRBM(randn(3), randn(2), randn(3,2))
     white_rbm = @inferred whiten(rbm, affine_v, affine_h)
-    v = bitrand(size(visible(rbm))..., 100)
-    h = bitrand(size(hidden(rbm))..., 100)
+    v = bitrand(size(rbm.visible)..., 100)
+    h = bitrand(size(rbm.hidden)..., 100)
 
-    @test energy(visible(rbm), v) ≈ energy(visible(white_rbm), v) + v' * weights(rbm) * affine_h.u
-    @test energy(hidden(rbm), h) ≈ energy(hidden(white_rbm), h) + h' * weights(rbm)' * affine_v.u
+    @test energy(rbm.visible, v) ≈ energy(white_rbm.visible, v) + v' * rbm.w * affine_h.u
+    @test energy(rbm.hidden, h) ≈ energy(white_rbm.hidden, h) + h' * rbm.w' * affine_v.u
 
-    @test inputs_v_to_h(rbm, v .- affine_v.u) ≈ @inferred inputs_v_to_h(white_rbm, v)
-    @test inputs_h_to_v(rbm, h .- affine_h.u) ≈ @inferred inputs_h_to_v(white_rbm, h)
+    @test inputs_h_from_v(rbm, v .- affine_v.u) ≈ @inferred inputs_h_from_v(white_rbm, v)
+    @test inputs_v_from_h(rbm, h .- affine_h.u) ≈ @inferred inputs_v_from_h(white_rbm, h)
 
     ΔE = interaction_energy(rbm, affine_v.u, affine_h.u)::Real
     @test @inferred(energy_shift(rbm, affine_v, affine_h)) ≈ ΔE
@@ -106,8 +106,8 @@ end
     )
     @test iszero(energy_shift(rbm, rbm.affine_v, rbm.affine_h))
 
-    v = bitrand(size(visible(rbm))..., 100)
-    h = bitrand(size(hidden(rbm))..., 100)
+    v = bitrand(size(rbm.visible)..., 100)
+    h = bitrand(size(rbm.hidden)..., 100)
     E = energy(rbm, v, h)
     F = free_energy(rbm, v)
     affine_v = @inferred Affine(randn(3,3), randn(3))
@@ -132,7 +132,7 @@ end
     affine_v = Affine(randn(3,3), randn(3))
     affine_h = Affine(randn(2,2), randn(2))
     white_rbm = BinaryWhiteRBM(randn(3), randn(2), randn(3,2), affine_v, affine_h)
-    v = bitrand(size(visible(white_rbm))...)
+    v = bitrand(size(white_rbm.visible)...)
     F = -log(sum(exp(-energy(white_rbm, v, h)) for h in [[0,0], [0,1], [1,0], [1,1]]))
     @test free_energy(white_rbm, v) ≈ F
 end
@@ -141,7 +141,7 @@ end
     affine_v = Affine(randn(3,3), randn(3))
     affine_h = Affine(randn(2,2), randn(2))
     white_rbm = BinaryWhiteRBM(randn(3), randn(2), randn(3,2), affine_v, affine_h)
-    v = bitrand(size(visible(white_rbm))...)
+    v = bitrand(size(white_rbm.visible)...)
     gs = Zygote.gradient(white_rbm) do white_rbm
         mean(free_energy(white_rbm, v))
     end

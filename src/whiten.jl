@@ -41,17 +41,17 @@ whiten(rbm::RBM, affine_v::Affine, affine_h::Affine) = whiten(whiten(rbm), affin
 whiten(rbm::RBM) = WhiteRBM(rbm)
 
 function whiten(white_rbm::AffineRBM, affine_v::Affine, affine_h::Affine)
-    @assert length(visible(white_rbm)) == length(affine_v.u)
-    @assert length(hidden(white_rbm)) == length(affine_h.u)
+    @assert length(white_rbm.visible) == length(affine_v.u)
+    @assert length(white_rbm.hidden) == length(affine_h.u)
 
-    w1 = reshape(weights(white_rbm), length(visible(white_rbm)), length(hidden(white_rbm)))
+    w1 = reshape(white_rbm.w, length(white_rbm.visible), length(white_rbm.hidden))
     w2 = affine_v.A' \ white_rbm.affine_v.A' * w1 * white_rbm.affine_h.A / affine_h.A
-    Δg = inputs_h_to_v(white_rbm, reshape(affine_h.u, size(hidden(white_rbm))))
-    Δθ = inputs_v_to_h(white_rbm, reshape(affine_v.u, size(visible(white_rbm))))
+    Δg = inputs_v_from_h(white_rbm, reshape(affine_h.u, size(white_rbm.hidden)))
+    Δθ = inputs_h_from_v(white_rbm, reshape(affine_v.u, size(white_rbm.visible)))
 
-    vis = shift_fields(visible(white_rbm), reshape(Δg, size(visible(white_rbm))))
-    hid = shift_fields(hidden(white_rbm), reshape(Δθ, size(hidden(white_rbm))))
-    rbm = RBM(vis, hid, reshape(w2, size(weights(white_rbm))))
+    vis = shift_fields(white_rbm.visible, reshape(Δg, size(white_rbm.visible)))
+    hid = shift_fields(white_rbm.hidden, reshape(Δθ, size(white_rbm.hidden)))
+    rbm = RBM(vis, hid, reshape(w2, size(white_rbm.w)))
 
     return WhiteRBM(rbm, affine_v, affine_h)
 end
@@ -63,27 +63,27 @@ function whiten(white_rbm::WhiteRBM)
 end
 
 function whiten_visible(white_rbm::WhiteRBM, affine_v::Affine)
-    @assert length(visible(white_rbm)) == length(affine_v.u)
+    @assert length(white_rbm.visible) == length(affine_v.u)
 
-    w1 = reshape(weights(white_rbm), length(visible(white_rbm)), length(hidden(white_rbm)))
+    w1 = reshape(white_rbm.w, length(white_rbm.visible), length(white_rbm.hidden))
     w2 = affine_v.A' \ white_rbm.affine_v.A' * w1
-    Δθ = inputs_v_to_h(white_rbm, reshape(affine_v.u, size(visible(white_rbm))))
+    Δθ = inputs_h_from_v(white_rbm, reshape(affine_v.u, size(white_rbm.visible)))
 
-    hid = shift_fields(hidden(white_rbm), Δθ)
-    rbm = RBM(visible(white_rbm), hid, reshape(w2, size(weights(white_rbm))))
+    hid = shift_fields(white_rbm.hidden, Δθ)
+    rbm = RBM(white_rbm.visible, hid, reshape(w2, size(white_rbm.w)))
 
     return WhiteRBM(rbm, affine_v, white_rbm.affine_h)
 end
 
 function whiten_hidden(white_rbm::WhiteRBM, affine_h::Affine)
-    @assert length(hidden(white_rbm)) == length(affine_h.u)
+    @assert length(white_rbm.hidden) == length(affine_h.u)
 
-    w1 = reshape(weights(white_rbm), length(visible(white_rbm)), length(hidden(white_rbm)))
+    w1 = reshape(white_rbm.w, length(white_rbm.visible), length(white_rbm.hidden))
     w2 = w1 * white_rbm.affine_h.A / affine_h.A
-    Δg = inputs_h_to_v(white_rbm, reshape(affine_h.u, size(hidden(white_rbm))))
+    Δg = inputs_v_from_h(white_rbm, reshape(affine_h.u, size(white_rbm.hidden)))
 
-    vis = shift_fields(visible(white_rbm), Δg)
-    rbm = RBM(vis, hidden(white_rbm), reshape(w2, size(weights(white_rbm))))
+    vis = shift_fields(white_rbm.visible, Δg)
+    rbm = RBM(vis, white_rbm.hidden, reshape(w2, size(white_rbm.w)))
 
     return WhiteRBM(rbm, white_rbm.affine_v, affine_h)
 end
@@ -101,21 +101,21 @@ end
 whiten!(rbm::WhiteRBM) = whiten!(rbm, one(rbm.affine_v), one(rbm.affine_h))
 
 function whiten_visible!(rbm::WhiteRBM, affine_v::Affine)
-    @assert length(visible(rbm)) == length(affine_v.u)
-    Δθ = inputs_v_to_h(rbm, reshape(affine_v.u, size(visible(rbm))))
-    shift_fields!(hidden(rbm), Δθ)
-    w = reshape(weights(rbm), length(visible(rbm)), length(hidden(rbm)))
-    copyto!(weights(rbm), affine_v.A' \ rbm.affine_v.A' * w)
+    @assert length(rbm.visible) == length(affine_v.u)
+    Δθ = inputs_h_from_v(rbm, reshape(affine_v.u, size(rbm.visible)))
+    shift_fields!(rbm.hidden, Δθ)
+    w = reshape(rbm.w, length(rbm.visible), length(rbm.hidden))
+    copyto!(rbm.w, affine_v.A' \ rbm.affine_v.A' * w)
     copy!(rbm.affine_v, affine_v)
     return rbm
 end
 
 function whiten_hidden!(rbm::WhiteRBM, affine_h::Affine)
-    @assert length(hidden(rbm)) == length(affine_h.u)
-    Δg = inputs_h_to_v(rbm, reshape(affine_h.u, size(hidden(rbm))))
-    shift_fields!(visible(rbm), Δg)
-    w = reshape(weights(rbm), length(visible(rbm)), length(hidden(rbm)))
-    copyto!(weights(rbm), w * rbm.affine_h.A / affine_h.A)
+    @assert length(rbm.hidden) == length(affine_h.u)
+    Δg = inputs_v_from_h(rbm, reshape(affine_h.u, size(rbm.hidden)))
+    shift_fields!(rbm.visible, Δg)
+    w = reshape(rbm.w, length(rbm.visible), length(rbm.hidden))
+    copyto!(rbm.w, w * rbm.affine_h.A / affine_h.A)
     copy!(rbm.affine_h, affine_h)
     return rbm
 end
@@ -126,21 +126,21 @@ end
 Computes the constant energy shift if the affine transformations were updated as given.
 """
 function energy_shift(rbm::WhiteRBM, affine_v::Affine, affine_h::Affine)
-    @assert length(visible(rbm)) == length(affine_v.u)
-    @assert length(hidden(rbm)) == length(affine_h.u)
-    E1 = RBMs.interaction_energy(RBM(rbm), rbm.affine_v.A * rbm.affine_v.u, rbm.affine_h.A * rbm.affine_h.u)
-    E2 = RBMs.interaction_energy(RBM(rbm), rbm.affine_v.A * affine_v.u, rbm.affine_h.A * affine_h.u)
+    @assert length(rbm.visible) == length(affine_v.u)
+    @assert length(rbm.hidden) == length(affine_h.u)
+    E1 = interaction_energy(RBM(rbm), rbm.affine_v.A * rbm.affine_v.u, rbm.affine_h.A * rbm.affine_h.u)
+    E2 = interaction_energy(RBM(rbm), rbm.affine_v.A * affine_v.u, rbm.affine_h.A * affine_h.u)
     return E2 - E1
 end
 
 function energy_shift_visible(rbm::WhiteRBM, affine_v::Affine)
     Δa = affine_v.u - rbm.affine_v.u
-    return RBMs.interaction_energy(RBM(rbm), rbm.affine_v.A * Δa, rbm.affine_h.A * rbm.affine_h.u)
+    return interaction_energy(RBM(rbm), rbm.affine_v.A * Δa, rbm.affine_h.A * rbm.affine_h.u)
 end
 
 function energy_shift_hidden(rbm::WhiteRBM, affine_h::Affine)
     Δb = affine_h.u - rbm.affine_h.u
-    return RBMs.interaction_energy(RBM(rbm), rbm.affine_v.A * rbm.affine_v.u, rbm.affine_h.A * Δb)
+    return interaction_energy(RBM(rbm), rbm.affine_v.A * rbm.affine_v.u, rbm.affine_h.A * Δb)
 end
 
 energy_shift(rbm::RBM, affine_v::Affine, affine_h::Affine) = energy_shift(whiten(rbm), affine_v, affine_h)

@@ -8,11 +8,11 @@ function BinaryWhiteRBM(
     a::AbstractArray, b::AbstractArray, w::AbstractArray,
     affine_v::Affine, affine_h::Affine
 )
-    rbm = RBMs.BinaryRBM(a, b, w)
+    rbm = BinaryRBM(a, b, w)
     return WhiteRBM(rbm, affine_v, affine_h)
 end
 
 function BinaryWhiteRBM(a::AbstractArray, b::AbstractArray, w::AbstractArray)
-    rbm = RBMs.BinaryRBM(a, b, w)
+    rbm = BinaryRBM(a, b, w)
     return WhiteRBM(rbm)
 end

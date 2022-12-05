@@ -12,22 +12,22 @@ function pcd!(
     transform_v::AbstractTransform = Whiten(),
     transform_h::AbstractTransform = Stdize()
 )
-    @assert size(data) == (size(visible(white_rbm))..., size(data)[end])
+    @assert size(data) == (size(white_rbm.visible)..., size(data)[end])
     @assert isnothing(wts) || _nobs(data) == _nobs(wts)
 
     @assert 0 ≤ damping ≤ 1
 
     whiten_visible_from_data!(white_rbm, data, transform_v; wts, ϵ = ϵv)
-    stats = RBMs.suffstats(visible(white_rbm), data; wts)
+    stats = RBMs.suffstats(white_rbm.visible, data; wts)
 
     for epoch in 1:epochs
         batches = RBMs.minibatches(data, wts; batchsize)
         Δt = @elapsed for (vd, wd) in batches
             # update fantasy chains
-            vm .= RBMs.sample_v_from_v(white_rbm, vm; steps)
+            vm .= sample_v_from_v(white_rbm, vm; steps)
             # update hidden affine transform
             if !(transform_h isa Identity)
-                inputs = RBMs.inputs_v_to_h(white_rbm, vd)
+                inputs = inputs_h_from_v(white_rbm, vd)
                 whiten_hidden_from_inputs!(white_rbm, inputs, transform_h; damping, wts=wd, ϵ=ϵh)
             end
             # compute contrastive divergence gradient
@@ -52,16 +52,16 @@ end
 function RBMs.∂contrastive_divergence(
     rbm::WhiteRBM, vd::AbstractArray, vm::AbstractArray;
     wd = nothing, wm = nothing,
-    stats = RBMs.suffstats(visible(rbm), vd; wts = wd),
+    stats = RBMs.suffstats(rbm.visible, vd; wts = wd),
 )
-    ∂d = RBMs.∂free_energy(rbm, vd; wts = wd, stats)
-    ∂m = RBMs.∂free_energy(rbm, vm; wts = wm)
+    ∂d = ∂free_energy(rbm, vd; wts = wd, stats)
+    ∂m = ∂free_energy(rbm, vm; wts = wm)
     ∂ = RBMs.subtract_gradients(∂d, ∂m)
     return ∂
 end
 
 function RBMs.update!(white_rbm::WhiteRBM, ∂::NamedTuple)
-    RBMs.update!(RBMs.RBM(white_rbm), ∂)
+    RBMs.update!(RBM(white_rbm), ∂)
     return white_rbm
 end
 
@@ -69,6 +69,6 @@ RBMs.update!(∂::NamedTuple, rbm::WhiteRBM, optim) = RBMs.update!(∂, RBM(rbm)
 
 function initial_fantasy_v(rbm, data::AbstractArray, batchsize::Int)
     inputs = falses(size(data)[1:(end - 1)]..., batchsize)
-    vm = RBMs.sample_from_inputs(visible(rbm), inputs)
+    vm = sample_from_inputs(rbm.visible, inputs)
     return oftype(data, vm)
 end

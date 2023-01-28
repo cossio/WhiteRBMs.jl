@@ -1,8 +1,8 @@
 abstract type AbstractTransform end
-struct Whiten <: AbstractTransform end
-struct Stdize <: AbstractTransform end
-struct Center <: AbstractTransform end
-struct Identity <: AbstractTransform end
+struct Whiten <: AbstractTransform end # whiten by an affine transform
+struct Stdize <: AbstractTransform end # standardize by scaling and centering
+struct Center <: AbstractTransform end # center by subtracting the mean
+struct Identity <: AbstractTransform end # no transform
 
 function whiten_visible_from_data(
     white_rbm::WhiteRBM, data::AbstractArray, transform::AbstractTransform = Whiten();

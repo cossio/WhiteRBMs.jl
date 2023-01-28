@@ -25,6 +25,7 @@ function WhiteRBM(visible, hidden, w, affine_v, affine_h)
     return WhiteRBM(rbm, affine_v, affine_h)
 end
 
+# Having the affine transform type args first is convenient in some cases ...
 const AffineRBM{Av,Ah,V,H,W} = WhiteRBM{V,H,W,Av,Ah}
 
 """
@@ -49,57 +50,52 @@ The resulting model is *not* equivalent to the original `white_rbm`.
 To construct an equivalent model, use the function
 `blacken(white_rbm)` instead (see [`blacken`](@ref)).
 """
-function RestrictedBoltzmannMachines.RBM(white_rbm::WhiteRBM)
-    return RBM(white_rbm.visible, white_rbm.hidden, white_rbm.w)
+RestrictedBoltzmannMachines.RBM(rbm::WhiteRBM) = RBM(rbm.visible, rbm.hidden, rbm.w)
+
+function whiten_v(rbm::WhiteRBM, v::AbstractArray)
+    return reshape(rbm.affine_v * flatten(rbm.visible, v), size(v))
 end
 
-function whiten_v(white_rbm::WhiteRBM, v::AbstractArray)
-    return reshape(white_rbm.affine_v * flatten(white_rbm.visible, v), size(v))
+function whiten_h(rbm::WhiteRBM, h::AbstractArray)
+    return reshape(rbm.affine_h * flatten(rbm.hidden, h), size(h))
 end
 
-function whiten_h(white_rbm::WhiteRBM, h::AbstractArray)
-    return reshape(white_rbm.affine_h * flatten(white_rbm.hidden, h), size(h))
-end
-
-function RestrictedBoltzmannMachines.energy(white_rbm::WhiteRBM, v::AbstractArray, h::AbstractArray)
-    Ev = energy(white_rbm.visible, v)
-    Eh = energy(white_rbm.hidden, h)
-    Ew = interaction_energy(white_rbm, v, h)
+function RestrictedBoltzmannMachines.energy(rbm::WhiteRBM, v::AbstractArray, h::AbstractArray)
+    Ev = energy(rbm.visible, v)
+    Eh = energy(rbm.hidden, h)
+    Ew = interaction_energy(rbm, v, h)
     return Ev .+ Eh .+ Ew
 end
 
-function RestrictedBoltzmannMachines.interaction_energy(white_rbm::WhiteRBM, v::AbstractArray, h::AbstractArray)
-    white_v = whiten_v(white_rbm, v)
-    white_h = whiten_h(white_rbm, h)
-    return interaction_energy(RBM(white_rbm), white_v, white_h)
+function RestrictedBoltzmannMachines.interaction_energy(rbm::WhiteRBM, v::AbstractArray, h::AbstractArray)
+    white_v = whiten_v(rbm, v)
+    white_h = whiten_h(rbm, h)
+    return interaction_energy(RBM(rbm), white_v, white_h)
 end
 
-function RestrictedBoltzmannMachines.free_energy(white_rbm::WhiteRBM, v::AbstractArray)
-    inputs = inputs_h_from_v(white_rbm, v)
-    E_vis = energy(white_rbm.visible, v)
-    F_hid = free_energy(white_rbm.hidden, inputs)
-    b = reshape(white_rbm.affine_h.u, size(white_rbm.hidden))
-    ΔE = energy(Binary(b), inputs)
-    return E_vis - ΔE + F_hid
+function RestrictedBoltzmannMachines.free_energy(rbm::WhiteRBM, v::AbstractArray)
+    inputs = inputs_h_from_v(rbm, v)
+    E = energy(rbm.visible, v)
+    Γ = cgf(rbm.hidden, inputs)
+    ΔE = energy(Binary(; θ = reshape(rbm.affine_h.u, size(rbm.hidden))), inputs)
+    return E - ΔE - Γ
 end
 
-function RestrictedBoltzmannMachines.inputs_h_from_v(white_rbm::WhiteRBM, v::AbstractArray)
-    white_v = whiten_v(white_rbm, v)
-    inputs = inputs_h_from_v(RBM(white_rbm), white_v)
-    I_flat = flatten(white_rbm.hidden, inputs)
-    return reshape(white_rbm.affine_h.A' * I_flat, size(inputs))
+function RestrictedBoltzmannMachines.inputs_h_from_v(rbm::WhiteRBM, v::AbstractArray)
+    white_v = whiten_v(rbm, v)
+    inputs = inputs_h_from_v(RBM(rbm), white_v)
+    return reshape(rbm.affine_h.A' * flatten(rbm.hidden, inputs), size(inputs))
 end
 
-function RestrictedBoltzmannMachines.inputs_v_from_h(white_rbm::WhiteRBM, h::AbstractArray)
-    white_h = whiten_h(white_rbm, h)
-    inputs = inputs_v_from_h(RBM(white_rbm), white_h)
-    I_flat = flatten(white_rbm.visible, inputs)
-    return reshape(white_rbm.affine_v.A' * I_flat, size(inputs))
+function RestrictedBoltzmannMachines.inputs_v_from_h(rbm::WhiteRBM, h::AbstractArray)
+    white_h = whiten_h(rbm, h)
+    inputs = inputs_v_from_h(RBM(rbm), white_h)
+    return reshape(rbm.affine_v.A' * flatten(rbm.visible, inputs), size(inputs))
 end
 
-function RestrictedBoltzmannMachines.sample_h_from_v(white_rbm::WhiteRBM, v::AbstractArray)
-    inputs = inputs_h_from_v(white_rbm, v)
-    return sample_from_inputs(white_rbm.hidden, inputs)
+function RestrictedBoltzmannMachines.sample_h_from_v(rbm::WhiteRBM, v::AbstractArray)
+    inputs = inputs_h_from_v(rbm, v)
+    return sample_from_inputs(rbm.hidden, inputs)
 end
 
 function RestrictedBoltzmannMachines.sample_v_from_h(white_rbm::WhiteRBM, h::AbstractArray)
@@ -107,97 +103,100 @@ function RestrictedBoltzmannMachines.sample_v_from_h(white_rbm::WhiteRBM, h::Abs
     return sample_from_inputs(white_rbm.visible, inputs)
 end
 
-function RestrictedBoltzmannMachines.sample_v_from_v(white_rbm::WhiteRBM, v::AbstractArray; steps::Int = 1)
-    @assert size(white_rbm.visible) == size(v)[1:ndims(white_rbm.visible)]
+function RestrictedBoltzmannMachines.sample_v_from_v(rbm::WhiteRBM, v::AbstractArray; steps::Int = 1)
+    @assert size(rbm.visible) == size(v)[1:ndims(rbm.visible)]
     for _ in 1:steps
-        v = oftype(v, sample_v_from_v_once(white_rbm, v))
+        v = oftype(v, sample_v_from_v_once(rbm, v))
     end
     return v
 end
 
-function RestrictedBoltzmannMachines.sample_h_from_h(white_rbm::WhiteRBM, h::AbstractArray; steps::Int = 1)
-    @assert size(white_rbm.hidden) == size(h)[1:ndims(white_rbm.hidden)]
+function RestrictedBoltzmannMachines.sample_h_from_h(rbm::WhiteRBM, h::AbstractArray; steps::Int = 1)
+    @assert size(rbm.hidden) == size(h)[1:ndims(rbm.hidden)]
     for _ in 1:steps
-        h = oftype(h, sample_h_from_h_once(white_rbm, h))
+        h = oftype(h, sample_h_from_h_once(rbm, h))
     end
     return h
 end
 
-function RestrictedBoltzmannMachines.sample_v_from_v_once(white_rbm::WhiteRBM, v::AbstractArray)
-    h = sample_h_from_v(white_rbm, v)
-    v = sample_v_from_h(white_rbm, h)
+function RestrictedBoltzmannMachines.sample_v_from_v_once(rbm::WhiteRBM, v::AbstractArray)
+    h = sample_h_from_v(rbm, v)
+    v = sample_v_from_h(rbm, h)
     return v
 end
 
-function RestrictedBoltzmannMachines.sample_h_from_h_once(white_rbm::WhiteRBM, h::AbstractArray)
-    v = sample_v_from_h(white_rbm, h)
-    h = sample_h_from_v(white_rbm, v)
+function RestrictedBoltzmannMachines.sample_h_from_h_once(rbm::WhiteRBM, h::AbstractArray)
+    v = sample_v_from_h(rbm, h)
+    h = sample_h_from_v(rbm, v)
     return h
 end
 
-function RestrictedBoltzmannMachines.mean_h_from_v(white_rbm::WhiteRBM, v::AbstractArray)
-    inputs = inputs_h_from_v(white_rbm, v)
-    return mean_from_inputs(white_rbm.hidden, inputs)
+function RestrictedBoltzmannMachines.mean_h_from_v(rbm::WhiteRBM, v::AbstractArray)
+    inputs = inputs_h_from_v(rbm, v)
+    return mean_from_inputs(rbm.hidden, inputs)
 end
 
-function RestrictedBoltzmannMachines.mean_v_from_h(white_rbm::WhiteRBM, h::AbstractArray)
-    inputs = inputs_v_from_h(white_rbm, h)
-    return mean_from_inputs(white_rbm.visible, inputs)
+function RestrictedBoltzmannMachines.mean_v_from_h(rbm::WhiteRBM, h::AbstractArray)
+    inputs = inputs_v_from_h(rbm, h)
+    return mean_from_inputs(rbm.visible, inputs)
 end
 
-function RestrictedBoltzmannMachines.mode_v_from_h(white_rbm::WhiteRBM, h::AbstractArray)
-    inputs = inputs_v_from_h(white_rbm, h)
-    return mode_from_inputs(white_rbm.visible, inputs)
+function RestrictedBoltzmannMachines.mode_v_from_h(rbm::WhiteRBM, h::AbstractArray)
+    inputs = inputs_v_from_h(rbm, h)
+    return mode_from_inputs(rbm.visible, inputs)
 end
 
-function RestrictedBoltzmannMachines.mode_h_from_v(white_rbm::WhiteRBM, v::AbstractArray)
-    inputs = inputs_h_from_v(white_rbm, v)
-    return mode_from_inputs(white_rbm.hidden, inputs)
+function RestrictedBoltzmannMachines.mode_h_from_v(rbm::WhiteRBM, v::AbstractArray)
+    inputs = inputs_h_from_v(rbm, v)
+    return mode_from_inputs(rbm.hidden, inputs)
 end
 
-function RestrictedBoltzmannMachines.reconstruction_error(white_rbm::WhiteRBM, v::AbstractArray; steps::Int = 1)
-    @assert size(white_rbm.visible) == size(v)[1:ndims(white_rbm.visible)]
-    v1 = sample_v_from_v(white_rbm, v; steps)
-    ϵ = Statistics.mean(abs.(v .- v1); dims = 1:ndims(white_rbm.visible))
-    if ndims(v) == ndims(white_rbm.visible)
+function RestrictedBoltzmannMachines.reconstruction_error(rbm::WhiteRBM, v::AbstractArray; steps::Int = 1)
+    @assert size(rbm.visible) == size(v)[1:ndims(rbm.visible)]
+    v1 = sample_v_from_v(rbm, v; steps)
+    ϵ = Statistics.mean(abs.(v .- v1); dims = 1:ndims(rbm.visible))
+    if ndims(v) == ndims(rbm.visible)
         return only(ϵ)
     else
         return reshape(ϵ, size(v)[end])
     end
 end
 
-function RestrictedBoltzmannMachines.mirror(white_rbm::WhiteRBM)
+function RestrictedBoltzmannMachines.mirror(rbm::WhiteRBM)
     function p(i)
-        if i ≤ ndims(white_rbm.visible)
-            return i + ndims(white_rbm.hidden)
+        if i ≤ ndims(rbm.visible)
+            return i + ndims(rbm.hidden)
         else
-            return i - ndims(white_rbm.visible)
+            return i - ndims(rbm.visible)
         end
     end
-    perm = ntuple(p, ndims(white_rbm.w))
-    w = permutedims(white_rbm.w, perm)
-    rbm = RBM(white_rbm.hidden, white_rbm.visible, w)
-    return WhiteRBM(rbm, white_rbm.affine_h, white_rbm.affine_v)
+    perm = ntuple(p, ndims(rbm.w))
+    w = permutedims(rbm.w, perm)
+    rbm = RBM(rbm.hidden, rbm.visible, w)
+    return WhiteRBM(rbm, rbm.affine_h, rbm.affine_v)
 end
 
 function RestrictedBoltzmannMachines.∂free_energy(
-    white_rbm::WhiteRBM, v::AbstractArray; wts = nothing,
-    stats = RBMs.suffstats(white_rbm.visible, v; wts)
+    rbm::WhiteRBM, v::AbstractArray; wts = nothing,
+    moments = moments_from_samples(rbm.visible, v; wts)
 )
-    inputs = inputs_h_from_v(white_rbm, v)
-    h = mean_from_inputs(white_rbm.hidden, inputs)
-    ∂v = ∂energy(white_rbm.visible, stats)
-    ∂h = ∂free_energy(white_rbm.hidden, inputs; wts)
-    ∂w = ∂interaction_energy(white_rbm, v, h; wts)
+    inputs = inputs_h_from_v(rbm, v)
+    ∂v = ∂energy_from_moments(rbm.visible, moments)
+    ∂Γ = ∂cgfs(rbm.hidden, inputs)
+    h = grad2ave(rbm.hidden, ∂Γ)
+
+    ∂h = reshape(wmean(-∂Γ; wts, dims = (ndims(rbm.hidden.par) + 1):ndims(∂Γ)), size(rbm.hidden.par))
+    ∂w = ∂interaction_energy(rbm, v, h; wts)
+
     return (visible = ∂v, hidden = ∂h, w = ∂w)
 end
 
 function RestrictedBoltzmannMachines.∂interaction_energy(
-    white_rbm::WhiteRBM, v::AbstractArray, h::AbstractArray; wts = nothing
+    rbm::WhiteRBM, v::AbstractArray, h::AbstractArray; wts = nothing
 )
-    white_v = whiten_v(white_rbm, v)
-    white_h = whiten_h(white_rbm, h)
-    ∂w = ∂interaction_energy(RBM(white_rbm), white_v, white_h; wts)
+    white_v = whiten_v(rbm, v)
+    white_h = whiten_h(rbm, h)
+    ∂w = ∂interaction_energy(RBM(rbm), white_v, white_h; wts)
     return ∂w
 end
 

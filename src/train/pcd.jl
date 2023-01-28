@@ -1,74 +1,63 @@
 function pcd!(
-    white_rbm::AffineRBM,
+    rbm::AffineRBM,
     data::AbstractArray;
     batchsize::Int = 1,
-    epochs::Int = 1,
-    optim = Flux.ADAM(),
-    history::MVHistory = MVHistory(),
+    iters::Int = 1, # number of gradient updates
+    optim::AbstractRule = Adam(),
     wts = nothing,
     steps::Int = 1,
-    vm::AbstractArray = initial_fantasy_v(white_rbm, data, batchsize),
-    damping::Real = 1//100, ϵv::Real = 0, ϵh::Real = 0,
+    moments = moments_from_samples(rbm.visible, data; wts), # sufficient statistics for visible layer,
+    vm::AbstractArray = sample_from_inputs(rbm.visible, Falses(size(rbm.visible)..., batchsize)),
+    damping::Real = 1//100,
+    ϵv::Real = 0,
+    ϵh::Real = 0,
     transform_v::AbstractTransform = Whiten(),
-    transform_h::AbstractTransform = Stdize()
+    transform_h::AbstractTransform = Stdize(),
+    ps = (; visible = rbm.visible.par, hidden = rbm.hidden.par, w = rbm.w),
+    state = setup(optim, ps), # initialize optimiser state
+    callback = Returns(nothing), # called for every batch
+    zerosum::Bool = true
 )
-    @assert size(data) == (size(white_rbm.visible)..., size(data)[end])
+    @assert size(data) == (size(rbm.visible)..., size(data)[end])
     @assert isnothing(wts) || _nobs(data) == _nobs(wts)
-
     @assert 0 ≤ damping ≤ 1
 
-    whiten_visible_from_data!(white_rbm, data, transform_v; wts, ϵ = ϵv)
-    stats = RBMs.suffstats(white_rbm.visible, data; wts)
+    zerosum && zerosum!(rbm)
 
-    for epoch in 1:epochs
-        batches = RBMs.minibatches(data, wts; batchsize)
-        Δt = @elapsed for (vd, wd) in batches
-            # update fantasy chains
-            vm .= sample_v_from_v(white_rbm, vm; steps)
-            # update hidden affine transform
-            if !(transform_h isa Identity)
-                inputs = inputs_h_from_v(white_rbm, vd)
-                whiten_hidden_from_inputs!(white_rbm, inputs, transform_h; damping, wts=wd, ϵ=ϵh)
-            end
-            # compute contrastive divergence gradient
-            ∂ = RBMs.∂contrastive_divergence(white_rbm, vd, vm; wd, stats)
-            # compute parameter step according to optimization algorithm
-            Δ = RBMs.update!(∂, white_rbm, optim)
-            # update parameters using gradient
-            RBMs.update!(white_rbm, Δ)
-            # store gradient and update step norms
-            push!(history, :∂, RBMs.gradnorms(∂))
-            push!(history, :Δ, RBMs.gradnorms(Δ))
+    whiten_visible_from_data!(rbm, data, transform_v; wts, ϵ = ϵv)
+
+    for (iter, (vd, wd)) in zip(1:iters, infinite_minibatches(data, wts; batchsize, shuffle))
+        # update fantasy chains
+        vm .= sample_v_from_v(rbm, vm; steps)
+
+        # update hidden affine transform
+        if !(transform_h isa Identity)
+            inputs = inputs_h_from_v(rbm, vd)
+            whiten_hidden_from_inputs!(rbm, inputs, transform_h; damping, wts=wd, ϵ=ϵh)
         end
 
-        push!(history, :epoch, epoch)
-        push!(history, :Δt, Δt)
-        @debug "epoch $epoch/$epochs ($(round(Δt, digits=2))s)"
+        # compute gradient
+        ∂d = ∂free_energy(rbm, vd; wts = wd, moments)
+        ∂m = ∂free_energy(rbm, vm)
+        ∂ = ∂d - ∂m
+
+        # correct weighted minibatch bias
+        batch_weight = isnothing(wts) ? 1 : mean(wd) / wts_mean
+        ∂ *= batch_weight
+
+        # weight decay
+        ∂regularize!(∂, rbm; l2_fields, l1_weights, l2_weights, l2l1_weights, zerosum)
+
+        # feed gradient to Optimiser rule
+        gs = (; visible = ∂.visible, hidden = ∂.hidden, w = ∂.w)
+        state, ps = update!(state, ps, gs)
+
+        zerosum && zerosum!(rbm)
+
+        callback(; rbm, optim, iter, vm, vd, wd)
     end
 
-    return white_rbm, history
+    return rbm
 end
 
-function RBMs.∂contrastive_divergence(
-    rbm::WhiteRBM, vd::AbstractArray, vm::AbstractArray;
-    wd = nothing, wm = nothing,
-    stats = RBMs.suffstats(rbm.visible, vd; wts = wd),
-)
-    ∂d = ∂free_energy(rbm, vd; wts = wd, stats)
-    ∂m = ∂free_energy(rbm, vm; wts = wm)
-    ∂ = RBMs.subtract_gradients(∂d, ∂m)
-    return ∂
-end
-
-function RBMs.update!(white_rbm::WhiteRBM, ∂::NamedTuple)
-    RBMs.update!(RBM(white_rbm), ∂)
-    return white_rbm
-end
-
-RBMs.update!(∂::NamedTuple, rbm::WhiteRBM, optim) = RBMs.update!(∂, RBM(rbm), optim)
-
-function initial_fantasy_v(rbm, data::AbstractArray, batchsize::Int)
-    inputs = falses(size(data)[1:(end - 1)]..., batchsize)
-    vm = sample_from_inputs(rbm.visible, inputs)
-    return oftype(data, vm)
-end
+RBMs.∂regularize!(∂::∂RBM, rbm::WhiteRBM; kwargs...) = ∂regularize!(∂, RBM(rbm); kwargs...)

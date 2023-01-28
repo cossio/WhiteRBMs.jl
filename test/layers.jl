@@ -18,14 +18,14 @@ end
 @testset "shift_fields" begin
     N = (3, 4)
     layers = (
-        Binary(randn(N...)),
-        Spin(randn(N...)),
-        Potts(randn(N...)),
-        Gaussian(randn(N...), rand(N...)),
-        ReLU(randn(N...), rand(N...)),
-        dReLU(randn(N...), randn(N...), rand(N...), rand(N...)),
-        pReLU(randn(N...), rand(N...), randn(N...), rand(N...) .- 0.5),
-        xReLU(randn(N...), rand(N...), randn(N...), randn(N...)),
+        Binary(; θ = randn(N...)),
+        Spin(; θ = randn(N...)),
+        Potts(; θ = randn(N...)),
+        Gaussian(; θ = randn(N...), γ = rand(N...)),
+        ReLU(; θ = randn(N...), γ = rand(N...)),
+        dReLU(; θp = randn(N...), θn = randn(N...), γp = rand(N...), γn = rand(N...)),
+        pReLU(; θ = randn(N...), γ = rand(N...), Δ = randn(N...), η = rand(N...) .- 0.5),
+        xReLU(; θ = randn(N...), γ = rand(N...), Δ = randn(N...), ξ = randn(N...)),
     )
     for layer in layers
         offset = randn(size(layer)...)
@@ -39,14 +39,14 @@ end
 @testset "shift_fields!" begin
     N = (3, 4)
     layers = (
-        Binary(randn(N...)),
-        Spin(randn(N...)),
-        Potts(randn(N...)),
-        Gaussian(randn(N...), rand(N...)),
-        ReLU(randn(N...), rand(N...)),
-        dReLU(randn(N...), randn(N...), rand(N...), rand(N...)),
-        pReLU(randn(N...), rand(N...), randn(N...), rand(N...) .- 0.5),
-        xReLU(randn(N...), rand(N...), randn(N...), randn(N...)),
+        Binary(; θ = randn(N...)),
+        Spin(; θ = randn(N...)),
+        Potts(; θ = randn(N...)),
+        Gaussian(; θ = randn(N...), γ = rand(N...)),
+        ReLU(; θ = randn(N...), γ = rand(N...)),
+        dReLU(; θp = randn(N...), θn = randn(N...), γp = rand(N...), γn = rand(N...)),
+        pReLU(; θ = randn(N...), γ = rand(N...), Δ = randn(N...), η = rand(N...) .- 0.5),
+        xReLU(; θ = randn(N...), γ = rand(N...), Δ = randn(N...), ξ = randn(N...)),
     )
     for layer in layers
         offset = randn(size(layer)...)

@@ -4,14 +4,13 @@ using Test: @test, @testset, @inferred
 using Random: bitrand
 using Statistics: mean
 using LinearAlgebra: I
-using RestrictedBoltzmannMachines: RBM, BinaryRBM
-using RestrictedBoltzmannMachines: visible, hidden, weights
-using RestrictedBoltzmannMachines: energy, interaction_energy, free_energy, ∂free_energy
-using RestrictedBoltzmannMachines: inputs_h_from_v, inputs_v_from_h
-using WhiteRBMs: BinaryWhiteRBM, WhiteRBM, Affine
-using WhiteRBMs: whiten, blacken, whiten_visible, whiten_hidden
-using WhiteRBMs: whiten!, whiten_visible!, whiten_hidden!
-using WhiteRBMs: energy_shift, energy_shift_visible, energy_shift_hidden
+using RestrictedBoltzmannMachines: RBM, BinaryRBM,
+    energy, interaction_energy, free_energy, ∂free_energy,
+    inputs_h_from_v, inputs_v_from_h
+using WhiteRBMs: BinaryWhiteRBM, WhiteRBM, Affine,
+    whiten, blacken, whiten_visible, whiten_hidden,
+    whiten!, whiten_visible!, whiten_hidden!,
+    energy_shift, energy_shift_visible, energy_shift_hidden
 
 @testset "whiten / blacken" begin
     rbm = @inferred BinaryRBM(randn(3), randn(2), randn(3,2))
@@ -146,7 +145,7 @@ end
         mean(free_energy(white_rbm, v))
     end
     ∂ = ∂free_energy(white_rbm, v)
-    @test ∂.visible.θ ≈ only(gs).visible.θ
-    @test ∂.hidden.θ ≈ only(gs).hidden.θ
+    @test ∂.visible ≈ only(gs).visible.par
+    @test ∂.hidden ≈ only(gs).hidden.par
     @test ∂.w ≈ only(gs).w
 end

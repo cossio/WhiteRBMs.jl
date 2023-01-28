@@ -1,6 +1,3 @@
-import MKL
-using SafeTestsets: @safetestset
-
-@time @safetestset "layers" begin include("layers.jl") end
-@time @safetestset "affine" begin include("affine.jl") end
-@time @safetestset "binary_white_rbm" begin include("binary_white_rbm.jl") end
+module layers_tests include("layers.jl") end
+module affine_tests include("affine.jl") end
+module binary_white_rbm_tests include("binary_white_rbm.jl") end

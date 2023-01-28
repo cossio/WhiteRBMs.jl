@@ -4,12 +4,11 @@
 ![](https://github.com/cossio/WhiteRBMs.jl/workflows/CI/badge.svg)
 [![codecov](https://codecov.io/gh/cossio/WhiteRBMs.jl/branch/master/graph/badge.svg?token=90I3AJIZIG)](https://codecov.io/gh/cossio/WhiteRBMs.jl)
 
-Train and sample whitned [Restricted Boltzmann machines](https://en.wikipedia.org/wiki/Restricted_Boltzmann_machine) in Julia.
+Train and sample whitened [Restricted Boltzmann machines](https://en.wikipedia.org/wiki/Restricted_Boltzmann_machine) in Julia.
 
 ## Installation
 
-This package is not registered.
-Install with:
+This package is not registered. Install with:
 
 ```julia
 using Pkg

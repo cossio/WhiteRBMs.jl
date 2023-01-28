@@ -20,4 +20,4 @@ This package does not export any symbols.
 
 ## Related
 
-Builds upon the [RestrictedBoltzmannMachines](https://github.com/cossio/RestrictedBoltzmannMachines.jl) Julia package, which defines the `RBM` and layer types.
+* https://github.com/cossio/RestrictedBoltzmannMachines.jl.

@@ -11,8 +11,6 @@ function pcd!(
     damping::Real = 1//100,
     ϵv::Real = 0,
     ϵh::Real = 0,
-    transform_v::AbstractTransform = Whiten(),
-    transform_h::AbstractTransform = Stdize(),
     ps = (; visible = rbm.visible.par, hidden = rbm.hidden.par, w = rbm.w),
     state = setup(optim, ps), # initialize optimiser state
     callback = Returns(nothing), # called for every batch
@@ -24,7 +22,7 @@ function pcd!(
 
     zerosum && zerosum!(rbm)
 
-    whiten_visible_from_data!(rbm, data, transform_v; wts, ϵ = ϵv)
+    whiten_visible_from_data!(rbm, data; wts, ϵ = ϵv)
 
     for (iter, (vd, wd)) in zip(1:iters, infinite_minibatches(data, wts; batchsize, shuffle))
         # update fantasy chains
@@ -33,7 +31,7 @@ function pcd!(
         # update hidden affine transform
         if !(transform_h isa Identity)
             inputs = inputs_h_from_v(rbm, vd)
-            whiten_hidden_from_inputs!(rbm, inputs, transform_h; damping, wts=wd, ϵ=ϵh)
+            whiten_hidden_from_inputs!(rbm, inputs; damping, wts=wd, ϵ=ϵh)
         end
 
         # compute gradient

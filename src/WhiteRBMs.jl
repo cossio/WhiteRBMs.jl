@@ -7,7 +7,7 @@ import RestrictedBoltzmannMachines as RBMs
 import RestrictedBoltzmannMachines
 
 using Optimisers: AbstractRule, setup, update!, Adam
-using FillArrays: Falses
+using FillArrays: Falses, Zeros
 using LinearAlgebra: Diagonal, cholesky, diagm, Symmetric, I
 using RestrictedBoltzmannMachines: RBM, AbstractLayer, BinaryRBM,
     moments_from_samples, infinite_minibatches, ∂RBM, cgf, grad2ave, ∂cgfs, wmean,

@@ -11,16 +11,14 @@ struct WhiteRBM{V,H,W,Av,Ah}
     not equivalent to the original `rbm`. To obtain an equivalent model (where energies
     differ by a constant), see [`whiten`](@ref).
     """
-    function WhiteRBM(rbm::RBM{V,H,W}, affine_v::Affine, affine_h::Affine) where {V,H,W}
+    function WhiteRBM(rbm::RBM{V,H,W}, affine_v::AbstractAffine, affine_h::AbstractAffine) where {V,H,W}
         @assert length(rbm.visible) == length(affine_v.u)
         @assert length(rbm.hidden) == length(affine_h.u)
-        return new{V, H, W, typeof(affine_v), typeof(affine_h)}(
-            rbm.visible, rbm.hidden, rbm.w, affine_v, affine_h
-        )
+        return new{V, H, W, typeof(affine_v), typeof(affine_h)}(rbm.visible, rbm.hidden, rbm.w, affine_v, affine_h)
     end
 end
 
-function WhiteRBM(visible, hidden, w, affine_v, affine_h)
+function WhiteRBM(visible::AbstractLayer, hidden::AbstractLayer, w::AbstractArray, affine_v::AbstractAffine, affine_h::AbstractAffine)
     rbm = RBM(visible, hidden, w)
     return WhiteRBM(rbm, affine_v, affine_h)
 end
@@ -29,36 +27,16 @@ end
 const AffineRBM{Av,Ah,V,H,W} = WhiteRBM{V,H,W,Av,Ah}
 
 """
-    WhiteRBM(rbm)
-
-Creates a WhiteRBM with identity transforms.
-"""
-function WhiteRBM(rbm::RBM)
-    T = eltype(rbm.w)
-    N = length(rbm.visible)
-    M = length(rbm.hidden)
-    affine_v = Affine(Diagonal(ones(T, N)), zeros(T, N))
-    affine_h = Affine(Diagonal(ones(T, M)), zeros(T, M))
-    return WhiteRBM(rbm, affine_v, affine_h)
-end
-
-"""
     RBM(white_rbm::WhiteRBM)
 
 Returns an (unwhitened) `RBM` which neglects the affine transforms of `white_rbm`.
 The resulting model is *not* equivalent to the original `white_rbm`.
-To construct an equivalent model, use the function
-`blacken(white_rbm)` instead (see [`blacken`](@ref)).
+To construct an equivalent model, use the function `blacken(white_rbm)` instead (see [`blacken`](@ref)).
 """
 RestrictedBoltzmannMachines.RBM(rbm::WhiteRBM) = RBM(rbm.visible, rbm.hidden, rbm.w)
 
-function whiten_v(rbm::WhiteRBM, v::AbstractArray)
-    return reshape(rbm.affine_v * flatten(rbm.visible, v), size(v))
-end
-
-function whiten_h(rbm::WhiteRBM, h::AbstractArray)
-    return reshape(rbm.affine_h * flatten(rbm.hidden, h), size(h))
-end
+whiten_v(rbm::WhiteRBM, v::AbstractArray) = reshape(rbm.affine_v * flatten(rbm.visible, v), size(v))
+whiten_h(rbm::WhiteRBM, h::AbstractArray) = reshape(rbm.affine_h * flatten(rbm.hidden, h), size(h))
 
 function RestrictedBoltzmannMachines.energy(rbm::WhiteRBM, v::AbstractArray, h::AbstractArray)
     Ev = energy(rbm.visible, v)

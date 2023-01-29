@@ -7,10 +7,10 @@ using LinearAlgebra: I
 using RestrictedBoltzmannMachines: RBM, BinaryRBM,
     energy, interaction_energy, free_energy, ∂free_energy,
     inputs_h_from_v, inputs_v_from_h
-using WhiteRBMs: BinaryWhiteRBM, WhiteRBM, Affine,
+using WhiteRBMs: BinaryWhiteRBM, WhiteRBM, Affine, CenterAffine,
     whiten, blacken, whiten_visible, whiten_hidden,
     whiten!, whiten_visible!, whiten_hidden!,
-    energy_shift, energy_shift_visible, energy_shift_hidden
+    energy_shift
 
 @testset "whiten / blacken" begin
     rbm = @inferred BinaryRBM(randn(3), randn(2), randn(3,2))
@@ -61,8 +61,9 @@ using WhiteRBMs: BinaryWhiteRBM, WhiteRBM, Affine,
     @test white_rbm_new.hidden.θ ≈ white_rbm_expected.hidden.θ
     @test white_rbm_new.w ≈ white_rbm_expected.w
 
-    wrbm1 = whiten_visible(whiten_hidden(rbm, affine_h), affine_v)
-    wrbm2 = whiten_hidden(whiten_visible(rbm, affine_v), affine_h)
+    wrbm0 = whiten(rbm, CenterAffine(zeros(3)), CenterAffine(zeros(2)))
+    wrbm1 = whiten_visible(whiten_hidden(wrbm0, affine_h), affine_v)
+    wrbm2 = whiten_hidden(whiten_visible(wrbm0, affine_v), affine_h)
     for wrbm in (wrbm1, wrbm2)
         @test wrbm.affine_v.u == affine_v.u
         @test wrbm.affine_v.A == affine_v.A
@@ -92,9 +93,6 @@ end
     @test @inferred(energy_shift(rbm, affine_v, affine_h)) ≈ ΔE
     @test energy(rbm, v, h) ≈ energy(white_rbm, v, h) .- ΔE
     @test free_energy(rbm, v) ≈ free_energy(white_rbm, v) .- ΔE
-
-    @test energy_shift_visible(rbm, affine_v) ≈ energy_shift(rbm, affine_v, one(affine_h))
-    @test energy_shift_hidden(rbm, affine_h)  ≈ energy_shift(rbm, one(affine_v), affine_h)
 end
 
 @testset "whiten!" begin
@@ -111,9 +109,6 @@ end
     F = free_energy(rbm, v)
     affine_v = @inferred Affine(randn(3,3), randn(3))
     affine_h = @inferred Affine(randn(2,2), randn(2))
-
-    @test energy_shift_visible(rbm, affine_v) ≈ energy_shift(rbm, affine_v, rbm.affine_h)
-    @test energy_shift_hidden(rbm, affine_h) ≈ energy_shift(rbm, rbm.affine_v, affine_h)
 
     ΔE = energy_shift(rbm, affine_v, affine_h)
     @test energy(whiten(rbm, affine_v, affine_h), v, h) ≈ E .+ ΔE

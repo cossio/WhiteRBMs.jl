@@ -1,15 +1,11 @@
 using Test: @test, @testset, @inferred
 using LinearAlgebra: I, norm, Symmetric, Diagonal, LowerTriangular
-using WhiteRBMs: Affine, whitening_transform, whitening_transform!
+using WhiteRBMs: Affine, whitening_transform
 
 @testset "affine" begin
     x = randn(5, 7)
     t = Affine(randn(5,5), randn(5))
     s = Affine(randn(5,5), randn(5))
-
-    @test Affine(5).A ≈ I
-    @test iszero(Affine(5).u)
-    @test Affine(5) * x ≈ x
 
     @test t * x ≈ t.A * (x .- t.u)
     @test t \ (t * x) ≈ t * (t \ x) ≈ x
@@ -45,38 +41,4 @@ end
     @test affine.A ≈ I
     @test affine.u ≈ μ
     @test norm(affine * μ) < 1e-10
-
-    affine = whitening_transform(C)
-    @test affine.A * C * affine.A' ≈ I
-    @test iszero(affine.u)
-
-    affine = whitening_transform(C) * whitening_transform(μ)
-    @test norm(affine * μ) < 1e-10
-    @test affine.A * C * affine.A' ≈ I
-end
-
-
-@testset "whitening_transform!" begin
-    μ = randn(5)
-    C = randn(5,5)
-    C = C * C'
-    affine = whitening_transform!(Affine(LowerTriangular(randn(5,5)), randn(5)), μ, C)
-    @test norm(affine * μ) < 1e-10
-    @test affine.A * C * affine.A' ≈ I
-    @test affine.A' * affine.A ≈ inv(C)
-
-    affine = whitening_transform!(Affine(Diagonal(randn(5)), randn(5)), μ)
-    @test affine.A ≈ I
-    @test affine.u ≈ μ
-    @test norm(affine * μ) < 1e-10
-
-    affine = whitening_transform!(Affine(LowerTriangular(randn(5,5)), randn(5)), C)
-    @test affine.A * C * affine.A' ≈ I
-    @test iszero(affine.u)
-
-    C = Diagonal(rand(5))
-    affine = whitening_transform!(Affine(Diagonal(randn(5)), randn(5)), μ, C)
-    @test norm(affine * μ) < 1e-10
-    @test affine.A * C * affine.A' ≈ I
-    @test affine.A' * affine.A ≈ inv(C)
 end

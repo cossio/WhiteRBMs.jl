@@ -1,7 +1,5 @@
-import RestrictedBoltzmannMachines as RBMs
-using RestrictedBoltzmannMachines: energy
 using Test: @test, @testset, @inferred
-using RestrictedBoltzmannMachines: sample_from_inputs,
+using RestrictedBoltzmannMachines: energy, sample_from_inputs,
     Binary, Spin, Potts, Gaussian, ReLU, dReLU, pReLU, xReLU
 using WhiteRBMs: shift_fields, shift_fields!
 

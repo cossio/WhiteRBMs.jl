@@ -3,12 +3,12 @@ module WhiteRBMs
 import Random
 import Statistics
 import LinearAlgebra
-import RestrictedBoltzmannMachines as RBMs
 import RestrictedBoltzmannMachines
 
 using Optimisers: AbstractRule, setup, update!, Adam
 using FillArrays: Falses, Zeros
 using LinearAlgebra: Diagonal, cholesky, diagm, Symmetric, I
+import CudaRBMs
 using CudaRBMs: gpu, cpu
 using RestrictedBoltzmannMachines: RBM, AbstractLayer, BinaryRBM,
     moments_from_samples, infinite_minibatches, ∂RBM, cgf, grad2ave, ∂cgfs, wmean,

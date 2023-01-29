@@ -58,4 +58,4 @@ function pcd!(
     return rbm
 end
 
-RBMs.∂regularize!(∂::∂RBM, rbm::WhiteRBM; kwargs...) = ∂regularize!(∂, RBM(rbm); kwargs...)
+RestrictedBoltzmannMachines.∂regularize!(∂::∂RBM, rbm::WhiteRBM; kwargs...) = ∂regularize!(∂, RBM(rbm); kwargs...)

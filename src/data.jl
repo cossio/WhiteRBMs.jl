@@ -41,7 +41,7 @@ function hidden_affine_from_inputs(
 )
     μ, ν = hidden_stats(rbm.hidden, inputs; wts)
     affine_h_new = whitening_transform(vec(μ), Diagonal(vec(ν .+ ϵ)))
-    affine_h =  damping * affine_h_new + (1 - damping) * rbm.affine_h
+    affine_h = damping * affine_h_new + (1 - damping) * rbm.affine_h
     return oftype(rbm.affine_h, affine_h)
 end
 

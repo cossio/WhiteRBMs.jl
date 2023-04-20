@@ -1,4 +1,4 @@
-function pcd!(
+function RestrictedBoltzmannMachines.pcd!(
     rbm::AffineRBM,
     data::AbstractArray;
     batchsize::Int = 1,
@@ -9,8 +9,7 @@ function pcd!(
     moments = moments_from_samples(rbm.visible, data; wts), # sufficient statistics for visible layer,
     vm::AbstractArray = sample_from_inputs(rbm.visible, Falses(size(rbm.visible)..., batchsize)),
     damping::Real = 1//100,
-    ϵv::Real = 0,
-    ϵh::Real = 0,
+    ϵv::Real = 0, ϵh::Real = 0, # "pseudocount" for estimating variances of v and h
     ps = (; visible = rbm.visible.par, hidden = rbm.hidden.par, w = rbm.w),
     state = setup(optim, ps), # initialize optimiser state
     callback = Returns(nothing), # called for every batch
@@ -29,10 +28,7 @@ function pcd!(
         vm .= sample_v_from_v(rbm, vm; steps)
 
         # update hidden affine transform
-        if !(transform_h isa Identity)
-            inputs = inputs_h_from_v(rbm, vd)
-            whiten_hidden_from_inputs!(rbm, inputs; damping, wts=wd, ϵ=ϵh)
-        end
+        whiten_hidden_from_v!(rbm, vd; damping, wts=wd, ϵ=ϵh)
 
         # compute gradient
         ∂d = ∂free_energy(rbm, vd; wts = wd, moments)

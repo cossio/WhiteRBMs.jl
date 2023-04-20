@@ -8,6 +8,14 @@ function whiten_hidden_from_inputs!(white_rbm::WhiteRBM, inputs::AbstractArray; 
     return whiten_hidden!(white_rbm, affine_h)
 end
 
+function whiten_hidden_from_v!(white_rbm::WhiteRBM, v::AbstractArray; wts = nothing, damping::Real = 0, ϵ::Real = 0)
+    if !(white_rbm.affine_h isa Identity) # only compute inputs if necessary
+        inputs = inputs_h_from_v(rbm, v)
+        whiten_hidden_from_inputs!(rbm, inputs; damping, wts, ϵ)
+    end
+    return white_rbm
+end
+
 function visible_affine_from_data(rbm::AffineRBM{<:CenterAffine,<:AbstractAffine}, data::AbstractArray; wts = nothing, ϵ::Real = 0)
     μ = batchmean(rbm.visible, data; wts)
     return oftype(rbm.affine_v, CenterAffine(vec(μ)))

@@ -6,5 +6,6 @@ All notable changes to this project will be documented in this file. The format 
 
 - This CHANGELOG file.
 - Updates for compatibility with RBMs.jl v1,2.
+- Use `RBMs.pcd!`.
 
 ## v0.1.0

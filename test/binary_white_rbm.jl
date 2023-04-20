@@ -1,9 +1,8 @@
-import Zygote
-
 using Test: @test, @testset, @inferred
 using Random: bitrand
 using Statistics: mean
 using LinearAlgebra: I
+using Zygote: gradient
 using RestrictedBoltzmannMachines: RBM, BinaryRBM,
     energy, interaction_energy, free_energy, ∂free_energy,
     inputs_h_from_v, inputs_v_from_h
@@ -136,7 +135,7 @@ end
     affine_h = Affine(randn(2,2), randn(2))
     white_rbm = BinaryWhiteRBM(randn(3), randn(2), randn(3,2), affine_v, affine_h)
     v = bitrand(size(white_rbm.visible)...)
-    gs = Zygote.gradient(white_rbm) do white_rbm
+    gs = gradient(white_rbm) do white_rbm
         mean(free_energy(white_rbm, v))
     end
     ∂ = ∂free_energy(white_rbm, v)

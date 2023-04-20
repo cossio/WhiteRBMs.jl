@@ -1,7 +1,7 @@
 name = "WhiteRBMs"
 uuid = "62670b8f-9db1-476f-a47a-29fece0473f3"
 authors = ["Jorge Fernandez-de-Cossio-Diaz <j.cossio.diaz@gmail.com>"]
-version = "0.1.0"
+version = "1.0.0-DEV"
 
 [deps]
 CudaRBMs = "4e7460e3-fd1b-4f88-90fa-49c1b80b3e77"

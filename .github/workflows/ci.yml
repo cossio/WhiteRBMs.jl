@@ -6,15 +6,11 @@ jobs:
   test:
     name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
-    # Nightly is advisory only: upstream breakage there (e.g. the CUDA stack
-    # failing to precompile on a new Julia dev version) must not fail CI.
-    continue-on-error: ${{ matrix.version == 'nightly' }}
     strategy:
       fail-fast: false
       matrix:
         version:
           - '1'
-          - 'nightly'
         os:
           - ubuntu-latest
           - macOS-latest

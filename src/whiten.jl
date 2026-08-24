@@ -59,7 +59,7 @@ function whiten(white_rbm::WhiteRBM, affine_v::AbstractAffine, affine_h::Abstrac
     return WhiteRBM(rbm, affine_v, affine_h)
 end
 
-function whiten_visible(white_rbm::WhiteRBM, affine_v::Affine)
+function whiten_visible(white_rbm::WhiteRBM, affine_v::AbstractAffine)
     @assert length(white_rbm.visible) == length(affine_v.u)
 
     w1 = reshape(white_rbm.w, length(white_rbm.visible), length(white_rbm.hidden))
@@ -72,7 +72,7 @@ function whiten_visible(white_rbm::WhiteRBM, affine_v::Affine)
     return WhiteRBM(rbm, affine_v, white_rbm.affine_h)
 end
 
-function whiten_hidden(white_rbm::WhiteRBM, affine_h::Affine)
+function whiten_hidden(white_rbm::WhiteRBM, affine_h::AbstractAffine)
     @assert length(white_rbm.hidden) == length(affine_h.u)
 
     w1 = reshape(white_rbm.w, length(white_rbm.visible), length(white_rbm.hidden))
@@ -87,12 +87,12 @@ end
 
 # In-place versions
 
-function whiten!(rbm::AffineRBM, affine_v::Affine, affine_h::Affine)
+function whiten!(rbm::AffineRBM, affine_v::AbstractAffine, affine_h::AbstractAffine)
     whiten_visible!(rbm, affine_v)
     whiten_hidden!(rbm, affine_h)
 end
 
-function whiten_visible!(rbm::WhiteRBM, affine_v::Affine)
+function whiten_visible!(rbm::WhiteRBM, affine_v::AbstractAffine)
     @assert length(rbm.visible) == length(affine_v.u)
     Δθ = inputs_h_from_v(rbm, reshape(affine_v.u, size(rbm.visible)))
     shift_fields!(rbm.hidden, Δθ)
@@ -102,7 +102,7 @@ function whiten_visible!(rbm::WhiteRBM, affine_v::Affine)
     return rbm
 end
 
-function whiten_hidden!(rbm::WhiteRBM, affine_h::Affine)
+function whiten_hidden!(rbm::WhiteRBM, affine_h::AbstractAffine)
     @assert length(rbm.hidden) == length(affine_h.u)
     Δg = inputs_v_from_h(rbm, reshape(affine_h.u, size(rbm.hidden)))
     shift_fields!(rbm.visible, Δg)
@@ -117,7 +117,7 @@ end
 
 Computes the constant energy shift if the affine transformations were updated as given.
 """
-function energy_shift(rbm::WhiteRBM, affine_v::Affine, affine_h::Affine)
+function energy_shift(rbm::WhiteRBM, affine_v::AbstractAffine, affine_h::AbstractAffine)
     @assert length(rbm.visible) == length(affine_v.u)
     @assert length(rbm.hidden) == length(affine_h.u)
     E1 = interaction_energy(RBM(rbm), rbm.affine_v.A * rbm.affine_v.u, rbm.affine_h.A * rbm.affine_h.u)
@@ -130,7 +130,7 @@ end
 
 Computes the constant energy shift if the affine transformations were updated as given.
 """
-function energy_shift(rbm::RBM, affine_v::Affine, affine_h::Affine)
+function energy_shift(rbm::RBM, affine_v::AbstractAffine, affine_h::AbstractAffine)
     wrbm = WhiteRBM(rbm, one(affine_v), one(affine_h))
     return energy_shift(wrbm, affine_v, affine_h)
 end

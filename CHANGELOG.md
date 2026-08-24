@@ -5,7 +5,10 @@ All notable changes to this project will be documented in this file. The format 
 ## Unreleased
 
 - This CHANGELOG file.
-- Updates for compatibility with RBMs.jl v1,2.
-- Use `RBMs.pcd!`.
+- Require RestrictedBoltzmannMachines v7, dropping support for older versions.
+- Use `RBMs.pcd!`. `pcd!(white_rbm, data)` now mirrors the upstream trainer (weighted data, regularization and zerosum keywords) and returns `(state, ps)`.
+- `∂free_energy(white_rbm, v)` returns a `RBMs.∂RBM` gradient.
+- Drop the CudaRBMs dependency: RestrictedBoltzmannMachines now provides `gpu`/`cpu` via its CUDA extension. WhiteRBMs types support Adapt.jl, so `gpu`, `cpu`, `cu` and `adapt` recurse through them.
+- `shift_fields` and `shift_fields!` are now provided by RestrictedBoltzmannMachines (re-exported here unchanged).
 
 ## v0.1.0

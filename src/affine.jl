@@ -36,6 +36,12 @@ function Base.copy!(dst::AbstractAffine, src::AbstractAffine)
     return dst
 end
 
+# CenterAffine has no `A` storage (`A` is the identity)
+function Base.copy!(dst::CenterAffine, src::CenterAffine)
+    copyto!(dst.u, src.u)
+    return dst
+end
+
 Base.:*(t::AbstractAffine, x::AbstractVecOrMat) = t.A * (x .- t.u)
 Base.:\(t::AbstractAffine, y::AbstractVecOrMat) = t.A \ y .+ t.u
 Base.:*(s::AbstractAffine, t::AbstractAffine) = Affine(s.A * t.A, t \ s.u)

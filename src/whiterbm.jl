@@ -23,6 +23,19 @@ function WhiteRBM(visible::AbstractLayer, hidden::AbstractLayer, w::AbstractArra
     return WhiteRBM(rbm, affine_v, affine_h)
 end
 
+"""
+    WhiteRBM(rbm)
+
+Creates a whitened RBM with identity transforms (equivalent to `rbm`).
+"""
+function WhiteRBM(rbm::RBM)
+    T = eltype(rbm.w)
+    N, M = length(rbm.visible), length(rbm.hidden)
+    affine_v = Affine(Matrix{T}(I, N, N), zeros(T, N))
+    affine_h = Affine(Matrix{T}(I, M, M), zeros(T, M))
+    return WhiteRBM(rbm, affine_v, affine_h)
+end
+
 # Having the affine transform type args first is convenient in some cases ...
 const AffineRBM{Av,Ah,V,H,W} = WhiteRBM{V,H,W,Av,Ah}
 
@@ -74,31 +87,30 @@ function RestrictedBoltzmannMachines.mirror(rbm::WhiteRBM)
     end
     perm = ntuple(p, ndims(rbm.w))
     w = permutedims(rbm.w, perm)
-    rbm = RBM(rbm.hidden, rbm.visible, w)
-    return WhiteRBM(rbm, rbm.affine_h, rbm.affine_v)
+    mirrored = RBM(rbm.hidden, rbm.visible, w)
+    return WhiteRBM(mirrored, rbm.affine_h, rbm.affine_v)
 end
 
 function RestrictedBoltzmannMachines.∂free_energy(
-    rbm::WhiteRBM, v::AbstractArray; wts = nothing,
+    rbm::WhiteRBM, v::AbstractArray;
+    wts::AbstractArray{<:Real} = uniform_wts(rbm.visible, v),
     moments = moments_from_samples(rbm.visible, v; wts)
 )
     inputs = inputs_h_from_v(rbm, v)
+    h_moments = moments_from_inputs(rbm.hidden, inputs)
     ∂v = ∂energy_from_moments(rbm.visible, moments)
-    ∂Γ = ∂cgfs(rbm.hidden, inputs)
-    h = grad2ave(rbm.hidden, ∂Γ)
-
-    ∂h = reshape(wmean(-∂Γ; wts, dims = (ndims(rbm.hidden.par) + 1):ndims(∂Γ)), size(rbm.hidden.par))
+    ∂h = ∂energy_from_moments(rbm.hidden, batchmean_moments(rbm.hidden, h_moments; wts))
+    h = mean_from_moments(rbm.hidden, h_moments)
     ∂w = ∂interaction_energy(rbm, v, h; wts)
-
-    return (visible = ∂v, hidden = ∂h, w = ∂w)
+    return ∂RBM(∂v, ∂h, ∂w)
 end
 
 function RestrictedBoltzmannMachines.∂interaction_energy(
-    rbm::WhiteRBM, v::AbstractArray, h::AbstractArray; wts = nothing
+    rbm::WhiteRBM, v::AbstractArray, h::AbstractArray; kwargs...
 )
     white_v = whiten_v(rbm, v)
     white_h = whiten_h(rbm, h)
-    ∂w = ∂interaction_energy(RBM(rbm), white_v, white_h; wts)
+    ∂w = ∂interaction_energy(RBM(rbm), white_v, white_h; kwargs...)
     return ∂w
 end
 

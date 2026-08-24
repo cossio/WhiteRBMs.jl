@@ -8,6 +8,4 @@ WhiteRBMs = "62670b8f-9db1-476f-a47a-29fece0473f3"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
-RestrictedBoltzmannMachines = "1, 2"
-Statistics = "1"
 Zygote = "0.7"
